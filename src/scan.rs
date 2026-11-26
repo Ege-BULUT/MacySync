@@ -139,6 +139,32 @@ fn expand(home: &Path, p: &str) -> PathBuf {
     }
 }
 
+/// What in ~/.claude is conversation history: sessions, transcripts, file snapshots. Gigabytes on a Mac used
+/// for long, and not needed to work: everything else (settings, skills, plugins, agents, memory) is.
+const CLAUDE_HISTORY: [&str; 12] = ["projects", "file-history", "transcripts", "history.jsonl", "shell-snapshots", "session-env", "sessions", "paste-cache", "todos", "debug", "backups", "jobs"];
+
+/// Claude Code in three parts, so its history can stay behind: `paths` are ~/.claude, ~/.claude.json and the
+/// `claude` link with the version it points at.
+fn claude_code(home: &Path, paths: Vec<String>, note: &str) -> Node {
+    let (app, files): (Vec<String>, Vec<String>) = paths.into_iter().partition(|p| p.starts_with("~/.local/"));
+    let dot = home.join(".claude");
+    let entries: Vec<String> = std::fs::read_dir(&dot).into_iter().flatten().flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect();
+    let mut settings: Vec<String> = files.iter().filter(|p| p.as_str() != "~/.claude").cloned().collect();
+    settings.extend(entries.iter().filter(|e| !CLAUDE_HISTORY.contains(&e.as_str())).map(|e| format!("~/.claude/{e}")));
+    // Memory lives under projects/<folder>/memory: it goes with the settings, the rest of projects/ is history.
+    for d in std::fs::read_dir(dot.join("projects")).into_iter().flatten().flatten() {
+        if d.path().join("memory").is_dir() {
+            settings.push(tilde(home, &d.path().join("memory")));
+        }
+    }
+    let history = entries.iter().filter(|e| CLAUDE_HISTORY.contains(&e.as_str())).map(|e| format!("~/.claude/{e}")).collect();
+    Node::group("ai/claude-code", "Claude Code", vec![
+        Node::leaf("ai/claude-code/app", "App", app),
+        Node::leaf("ai/claude-code/settings", "Settings, skills, plugins, memory", settings).with(|n| n.note = note.into()),
+        Node::leaf("ai/claude-code/history", "Conversation history", history).with(|n| n.note = "Past sessions, transcripts and file snapshots; `claude --resume` lists them. Folder names under projects/ carry the old home path: rename them for the new one.".into()),
+    ])
+}
+
 fn tilde(home: &Path, p: &Path) -> String {
     match p.strip_prefix(home) {
         Ok(rest) => format!("~/{}", rest.display()),
@@ -280,6 +306,10 @@ pub fn scan(home: &Path, app_dirs: &[PathBuf], skip_rebuildable: bool) -> Node {
             }
         }
         claimed.extend(paths.iter().cloned());
+        if name == "Claude Code" && exists("~/.claude") {
+            ai.push(claude_code(home, paths, note));
+            continue;
+        }
         ai.push(Node::leaf(&format!("ai/{}", slug(name)), name, paths).with(|n| {
             n.note = note.into();
             n.off = name == "Ollama models";

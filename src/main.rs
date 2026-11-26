@@ -15,7 +15,7 @@ const HELP: &str = "MacySync: move a Mac to a new Mac. Any Mac sends to or takes
   macysync              open the window
   macysync --demo       the window on made-up Macs; touches nothing
   macysync --detect     print what this Mac reports about itself and the look it gets
-  macysync --scan       print what this Mac can offer, with sizes and ids
+  macysync --scan [all] print what this Mac can offer, with sizes and ids (all: every part)
   macysync --give <id> [--only a,b]   without the window: ask Mac <id> to receive, then send
   macysync --accept [--only a,b]      without the window: approve the request waiting here, then do this side
   macysync --tailscale [down]         start MacySync's own Tailscale node (apart from any other Tailscale), or stop it";
@@ -70,16 +70,17 @@ fn main() {
         "--scan" => {
             let home = me::home_dir();
             let root = scan::scan(&home, &["/Applications".into(), home.join("Applications")], true);
-            fn show(n: &scan::Node, depth: usize) {
+            let limit = if args.get(1).is_some_and(|a| a == "all") { usize::MAX } else { 2 };
+            fn show(n: &scan::Node, depth: usize, limit: usize) {
                 if depth > 0 {
                     let flags = format!("{}{}", if n.secret { " [secret]" } else { "" }, if n.off { " [off]" } else { "" });
                     println!("{}{} {:.1} MB  {}{flags}", "  ".repeat(depth - 1), n.name, n.size as f64 / 1e6, n.id);
                 }
-                if depth < 2 {
-                    n.children.iter().for_each(|c| show(c, depth + 1));
+                if depth < limit {
+                    n.children.iter().for_each(|c| show(c, depth + 1, limit));
                 }
             }
-            show(&root, 0);
+            show(&root, 0, limit);
             println!("total {:.1} GB in {} leaves", root.size as f64 / 1e9, root.leaves().len());
         }
         _ if first.starts_with("--") && !ui::is_tooling_arg(first) => {
