@@ -92,8 +92,14 @@ pub const BROWSER_KEYS: [(&str, &str, &str); 7] = [
     ("Arc", "Arc Safe Storage", "Arc"),
 ];
 
-/// Folders rebuilt from source on the new Mac: skipped inside every copied folder when asked to.
+/// Folders rebuilt from source on the new Mac: skipped inside the person's own folders when asked to.
 pub const REBUILDABLE: [&str; 8] = ["node_modules", "target", ".venv", "venv", "__pycache__", ".gradle", "DerivedData", ".next"];
+
+/// Whether an item is the person's own folders, where REBUILDABLE is skipped. Never an app, its data or a tool's
+/// settings: an app bundle's node_modules is part of the app, and macOS bins one whose seal it breaks.
+pub fn rebuildable_in(id: &str) -> bool {
+    id.starts_with("home/") || id.starts_with("files/")
+}
 
 fn slug(s: &str) -> String {
     let mut out = String::new();
@@ -431,13 +437,16 @@ fn which(cmd: &str) -> bool {
 
 /// Every leaf's size in one `du` run (in kilobytes, files counted once even when two leaves share them).
 fn sizes(root: &mut Node, home: &Path, skip_rebuildable: bool) {
-    let mut all: Vec<String> = root.leaves().iter().flat_map(|l| l.paths.iter().cloned()).collect::<std::collections::BTreeSet<_>>().into_iter().collect();
-    all.retain(|p| expand(home, p).exists());
+    let leaves = root.leaves();
+    let paths = |own: bool| -> Vec<String> {
+        let set: std::collections::BTreeSet<String> = leaves.iter().filter(|l| rebuildable_in(&l.id) == own).flat_map(|l| l.paths.iter().cloned()).collect();
+        set.into_iter().filter(|p| expand(home, p).exists()).collect()
+    };
     let mut by_path: BTreeMap<String, u64> = BTreeMap::new();
-    for chunk in all.chunks(200) {
+    for (own, chunk) in [true, false].into_iter().flat_map(|own| paths(own).chunks(200).map(|c| (own, c.to_vec())).collect::<Vec<_>>()) {
         let mut c = Command::new("du");
         c.arg("-sk");
-        if skip_rebuildable {
+        if skip_rebuildable && own {
             for r in REBUILDABLE {
                 c.args(["-I", r]);
             }
@@ -479,6 +488,7 @@ mod tests {
         mk("projects/app/src/main.rs", 3000);
         mk("projects/app/node_modules/big.js", 200_000);
         mk("Applications/Karabiner-Elements.app/Contents/Info.plist", 10);
+        mk("Applications/Karabiner-Elements.app/Contents/Resources/node_modules/addon.node", 100_000);
         let root = scan(&home, &[home.join("Applications")], true);
 
         let k = root.find("apps/karabiner-elements").expect("the app");
@@ -492,6 +502,8 @@ mod tests {
         // Rebuildable folders don't count: the project is ~4 KB of source, not 200 KB of node_modules.
         let p = root.find("home/projects/app").unwrap();
         assert!(p.size < 50_000, "{}", p.size);
+        // An app's own node_modules does count: it is copied with the app.
+        assert!(root.find("apps/karabiner-elements/app").unwrap().size >= 100_000);
         assert_eq!(root.size, root.children.iter().map(|c| c.size).sum::<u64>());
         // Empty groups are gone.
         assert!(root.find("leftover").is_none());

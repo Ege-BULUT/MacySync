@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::scan::{Node, REBUILDABLE};
+use crate::scan::{rebuildable_in, Node, REBUILDABLE};
 use crate::seal;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -152,7 +152,7 @@ pub fn serve(listener: TcpListener, key: [u8; 32], items: Vec<Node>, home: &Path
 fn tar_item(item: &Node, home: &Path, skip_rebuildable: bool) -> io::Result<std::process::Child> {
     let mut c = Command::new("tar");
     c.arg("-cf").arg("-");
-    if skip_rebuildable {
+    if skip_rebuildable && rebuildable_in(&item.id) {
         for r in REBUILDABLE {
             c.args(["--exclude", r]);
         }
@@ -280,7 +280,11 @@ mod tests {
         std::fs::create_dir_all(home.join("proj/node_modules")).unwrap();
         std::fs::write(home.join("proj/main.rs"), b"fn main() {}").unwrap();
         std::fs::write(home.join("proj/node_modules/x.js"), b"junk").unwrap();
+        let addon = "Applications/X.app/Contents/Resources/app.asar.unpacked/node_modules/a/pty.node";
+        std::fs::create_dir_all(home.join(addon).parent().unwrap()).unwrap();
+        std::fs::write(home.join(addon), b"native").unwrap();
         let items = vec![
+            Node { id: "apps/x/app".into(), name: "App".into(), paths: vec!["~/Applications/X.app".into()], ..Node::default() },
             Node { id: "apps/karabiner/config".into(), name: "Config".into(), paths: vec!["~/.config/karabiner".into()], ..Node::default() },
             Node { id: "home/proj".into(), name: "proj".into(), paths: vec!["~/proj".into()], ..Node::default() },
             Node { id: "tools/echo".into(), name: "echo".into(), command: "echo brew \\\"jq\\\"".into(), file: "Brewfile".into(), ..Node::default() },
@@ -296,14 +300,16 @@ mod tests {
         let wrong = Endpoint { key: seal::random::<32>().to_vec(), ..ep.clone() };
         assert!(fetch(&wrong, vec!["home/proj".into()], &staging, |_, _| {}).is_err());
 
-        let done = fetch(&ep, vec!["apps/karabiner/config".into(), "home/proj".into(), "tools/echo".into()], &staging, |_, _| {}).unwrap();
-        assert_eq!(done.len(), 3);
+        let done = fetch(&ep, vec!["apps/x/app".into(), "apps/karabiner/config".into(), "home/proj".into(), "tools/echo".into()], &staging, |_, _| {}).unwrap();
+        assert_eq!(done.len(), 4);
         let h = home.to_string_lossy().trim_start_matches('/').to_string();
         let k = staging.join(safe("apps/karabiner/config")).join(&h).join(".config/karabiner/karabiner.json");
         assert_eq!(std::fs::read(k).unwrap(), b"{\"profiles\":[]}");
         let p = staging.join(safe("home/proj")).join(&h).join("proj");
         assert!(p.join("main.rs").exists());
         assert!(!p.join("node_modules").exists(), "rebuildable folders stay behind");
+        // An app's own node_modules is part of the app: without it the bundle's seal breaks and macOS bins it.
+        assert!(staging.join(safe("apps/x/app")).join(&h).join(addon).exists());
         let g = std::fs::read_to_string(staging.join(safe("tools/echo")).join("macysync-generated/Brewfile")).unwrap();
         assert_eq!(g.trim(), "brew \"jq\"");
 
