@@ -5,6 +5,7 @@ mod me;
 mod scan;
 mod seal;
 mod session;
+mod tail;
 mod setup;
 mod ui;
 mod wire;
@@ -16,7 +17,8 @@ const HELP: &str = "MacySync: move a Mac to a new Mac. Any Mac sends to or takes
   macysync --detect     print what this Mac reports about itself and the look it gets
   macysync --scan       print what this Mac can offer, with sizes and ids
   macysync --give <id> [--only a,b]   without the window: ask Mac <id> to receive, then send
-  macysync --accept [--only a,b]      without the window: approve the request waiting here, then do this side";
+  macysync --accept [--only a,b]      without the window: approve the request waiting here, then do this side
+  macysync --tailscale [down]         start MacySync's own Tailscale node (apart from any other Tailscale), or stop it";
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -29,6 +31,26 @@ fn main() {
             println!("{}", serde_json::to_string_pretty(&hw).unwrap());
             let l = look::guess(&hw);
             println!("look: {} / {}", look::model(&l.model).map(|m| m.marketing_name.as_str()).unwrap_or("?"), l.color);
+        }
+        "--tailscale" if args.get(1).is_some_and(|a| a == "down") => tail::stop(),
+        "--tailscale" => {
+            if let Err(e) = tail::start(&me::Config::load().id) {
+                eprintln!("macysync: {e}");
+                std::process::exit(1);
+            }
+            let mut shown = String::new();
+            loop {
+                let s = tail::status().unwrap_or_default();
+                if s.state == "Running" && !s.ip.is_empty() {
+                    println!("MacySync's Tailscale is on: {}", s.ip);
+                    break;
+                }
+                if !s.auth_url.is_empty() && s.auth_url != shown {
+                    println!("Sign in to Tailscale: {}", s.auth_url);
+                    shown = s.auth_url;
+                }
+                std::thread::sleep(std::time::Duration::from_secs(2));
+            }
         }
         "--give" | "--accept" => {
             let only: Vec<String> = args.iter().position(|a| a == "--only").and_then(|i| args.get(i + 1)).map(|v| v.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()).unwrap_or_default();

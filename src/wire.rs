@@ -40,16 +40,19 @@ struct Header {
 pub fn addresses() -> Vec<String> {
     let out = Command::new("ifconfig").output().map(|o| String::from_utf8_lossy(&o.stdout).to_string()).unwrap_or_default();
     let mut v: Vec<String> = out.lines().filter_map(|l| l.trim().strip_prefix("inet ")).filter_map(|l| l.split_whitespace().next()).filter(|a| !a.starts_with("127.")).map(String::from).collect();
+    v.extend(crate::tail::ip());
     v.sort_by_key(|a| a.starts_with("100."));
     v.dedup();
     v
 }
 
+fn tailnet(ip: std::net::IpAddr) -> bool {
+    matches!(ip, std::net::IpAddr::V4(ip) if ip.octets()[0] == 100 && (64..128).contains(&ip.octets()[1]))
+}
+
+/// MacySync's own Tailscale node hands its incoming connections over on 127.0.0.1.
 pub fn network_of(addr: &SocketAddr) -> &'static str {
-    match addr.ip() {
-        std::net::IpAddr::V4(ip) if ip.octets()[0] == 100 && (64..128).contains(&ip.octets()[1]) => "Tailscale",
-        _ => "LAN",
-    }
+    if tailnet(addr.ip()) || addr.ip().is_loopback() { "Tailscale" } else { "LAN" }
 }
 
 fn put_u32(w: &mut impl Write, n: u32) -> io::Result<()> {
@@ -204,7 +207,10 @@ pub fn fetch(ep: &Endpoint, need: Vec<String>, staging: &Path, on: impl Fn(&str,
     let mut last_err = String::from("no address to try");
     let stream = ep.addrs.iter().find_map(|a| {
         let addr = (a.as_str(), ep.port).to_socket_addrs().ok()?.next()?;
-        TcpStream::connect_timeout(&addr, Duration::from_secs(4)).map_err(|e| last_err = format!("{a}: {e}")).ok()
+        let direct = TcpStream::connect_timeout(&addr, Duration::from_secs(4));
+        // A tailnet address this Mac has no route to goes through MacySync's own node.
+        let r = if direct.is_err() && tailnet(addr.ip()) { crate::tail::connect(addr, Duration::from_secs(4)) } else { direct };
+        r.map_err(|e| last_err = format!("{a}: {e}")).ok()
     });
     let stream = stream.ok_or_else(|| format!("can't reach the other Mac ({last_err})"))?;
     stream.set_nodelay(true).ok();
