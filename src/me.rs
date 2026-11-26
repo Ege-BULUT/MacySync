@@ -23,21 +23,12 @@ pub struct Look {
     pub color: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum Mode {
-    #[default]
-    Sender,
-    Receiver,
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct Config {
     pub id: String,
     pub name: String,
     pub look: Look,
-    pub mode: Mode,
     /// owner/repo of the private bus repo.
     pub bus: String,
     /// The command the receiver runs to set things up; `{dir}` is the transfer folder with AGENTS.md and GOAL.md.
@@ -53,7 +44,6 @@ impl Default for Config {
             id: String::new(),
             name: String::new(),
             look: Look::default(),
-            mode: Mode::Sender,
             bus: String::new(),
             agent: crate::setup::AGENTS[0].1.into(),
             registered: false,

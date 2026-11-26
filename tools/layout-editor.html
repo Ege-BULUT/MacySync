@@ -92,8 +92,8 @@ svg text { font-family: Inter, -apple-system, sans-serif; }
       <path id="body" fill="#0a0e14" fill-opacity=".9"/>
       <g id="lines" clip-path="url(#clip)"></g>
       <g id="conduitG"></g>
-      <g id="elems"></g>
       <g id="bandsG"></g>
+      <g id="elems"></g>
       <path id="outline" fill="none" stroke="#7d8a9c" stroke-width="1.5"/>
       <path id="outlineHit" fill="none" stroke="transparent" stroke-width="14" class="ent" data-id="outline"/>
       <image id="ref" x="0" y="0" width="1280" height="780" opacity="0" preserveAspectRatio="none" pointer-events="none"/>
@@ -140,7 +140,7 @@ const T = {
     pointsOf: "Points of", pointsHint: "Drag points, double-click the line to add one, Delete removes the selected ones, Esc finishes.",
     selectedN: "selected", inGroup: "in group", members: "members", select: "Select", modePoints: "POINT EDIT",
     outline: "Background shape", conduit: "Bridge (data conduit)", title: "Title", laptop_left: "This Mac (left)", laptop_right: "Other Mac (right)",
-    left_panel: "Left panel (tabs + card)", right_panel: "Right card", controls: "Window buttons", dialog: "Request dialog",
+    left_panel: "Left panel (tabs + card)", right_panel: "Right card", actions: "Send / Receive buttons", controls: "Window buttons", dialog: "Request dialog",
     "band:left": "Lines over the left lobe", "band:bridge": "Lines through the bridge", "band:right": "Lines over the right lobe",
     y: "centre y", spread: "spread", intoBridge: "bend into bridge (x)", intoRight: "bend into right (x)",
     saved: "Saved to assets/layout.json. Tell Claude \"layout saved\" to rebuild the app with it.", saveFail: "Save failed: ",
@@ -168,7 +168,7 @@ const T = {
     pointsOf: "Noktalar:", pointsHint: "Noktaları sürükle, eklemek için çizgiye çift tıkla, seçilenleri Delete siler, Esc bitirir.",
     selectedN: "seçili", inGroup: "grupta", members: "üye", select: "Seç", modePoints: "NOKTA DÜZENLEME",
     outline: "Arka plan şekli", conduit: "Köprü (veri kanalı)", title: "Başlık", laptop_left: "Bu Mac (sol)", laptop_right: "Diğer Mac (sağ)",
-    left_panel: "Sol panel (sekmeler + kart)", right_panel: "Sağ kart", controls: "Pencere düğmeleri", dialog: "İstek diyaloğu",
+    left_panel: "Sol panel (sekmeler + kart)", right_panel: "Sağ kart", actions: "Gönder / Al düğmeleri", controls: "Pencere düğmeleri", dialog: "İstek diyaloğu",
     "band:left": "Sol lobdaki çizgiler", "band:bridge": "Köprüden geçen çizgiler", "band:right": "Sağ lobdaki çizgiler",
     y: "merkez y", spread: "yayılım", intoBridge: "köprüye kıvrılma (x)", intoRight: "sağa kıvrılma (x)",
     saved: "assets/layout.json kaydedildi. Uygulamayı bununla derlemesi için Claude'a \"layout kaydedildi\" de.", saveFail: "Kaydedilemedi: ",
@@ -194,7 +194,7 @@ const t = k => (T[lang] && T[lang][k]) || T.en[k] || k;
 const svg = document.getElementById("svg");
 const NS = "http://www.w3.org/2000/svg";
 const LAPTOP_H = 0.935, LID = 0.655;
-const ELEMS = ["title", "laptop_left", "laptop_right", "left_panel", "right_panel", "controls", "dialog"];
+const ELEMS = ["title", "laptop_left", "laptop_right", "actions", "left_panel", "right_panel", "controls", "dialog"];
 const BANDS = ["left", "bridge", "right"];
 let L = null, saved = "";
 let sel = new Set();              // entity ids
@@ -362,6 +362,12 @@ function drawElems() {
       for (let i = 0; i < 4; i++) el("rect", { x: r.x + i * (r.w / 4), y: r.y, width: r.w / 4 - 4, height: 28, rx: 5, fill: i === 1 ? "#2563c9" : "#111823", stroke: "#263243" }, gg);
       el("rect", { x: r.x, y: r.y + 36, width: r.w, height: r.h - 36, rx: 14, fill: "#111823", stroke: "#263243" }, gg);
       el("text", { x: r.x + 16, y: r.y + 60, fill: "#a3b1c2", "font-size": 13 }, gg).textContent = t(id);
+    } else if (id === "actions") {
+      el("rect", { x: r.x, y: r.y, width: r.w, height: r.h, fill: "transparent", stroke: "#4c9dff33", "stroke-dasharray": "3 4" }, gg);
+      [[r.y, (lang === "tr" ? "Gönder" : "Send") + "  ⟶"], [r.y + r.h - 34, "⟵  " + (lang === "tr" ? "Al" : "Receive")]].forEach(([y, label], i) => {
+        el("rect", { x: r.x, y, width: r.w, height: 34, rx: 17, fill: i ? "#182231" : "#2563c9", stroke: "#4c9dff" }, gg);
+        el("text", { x: r.x + r.w / 2, y: y + 22, "text-anchor": "middle", fill: "#e4ebf3", "font-size": 13, "font-weight": 700 }, gg).textContent = label;
+      });
     } else if (id === "controls") {
       for (let i = 0; i < 3; i++) el("rect", { x: r.x + i * (r.w / 3), y: r.y, width: r.w / 3 - 6, height: r.h, rx: 8, fill: "#182231", stroke: "#263243" }, gg);
       ["TR", "▁", "✕"].forEach((s, i) => el("text", { x: r.x + i * (r.w / 3) + (r.w / 3 - 6) / 2, y: r.y + r.h / 2 + 4, "text-anchor": "middle", fill: "#e4ebf3", "font-size": 12 }, gg).textContent = s);
@@ -698,6 +704,11 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { pinned = f
     catch (e2) { applyLangLite(); toast(t("noServer"), true); return; }
   }
   L.groups = L.groups || [];
+  if (!L.elements.actions) {
+    // Layouts saved before the Send / Receive buttons existed: put them on the conduit's middle, as the app does.
+    const m = bez(L.conduit, .5);
+    L.elements.actions = { x: Math.round(m[0] - 60), y: Math.round(m[1] - 75), w: 120, h: 150 };
+  }
   saved = JSON.stringify(L);
   applyLang();
 })();

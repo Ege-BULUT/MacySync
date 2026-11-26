@@ -12,7 +12,7 @@ use rune_kit::{Kit, PaletteSeed, TextInput};
 
 use crate::bus::{self, Answer, Ask, Bus, Device, Request, Session};
 use crate::look::{self, H, W, full};
-use crate::me::{self, Config, Hardware, Look, Mode};
+use crate::me::{self, Config, Hardware, Look};
 
 // Metallic blue and metallic grey on a graphite ground. Rune colours are linear light: these are the sRGB hex
 // values in the comments, decoded.
@@ -61,6 +61,19 @@ pub struct Elements {
     pub right_panel: Rect,
     pub controls: Rect,
     pub dialog: Rect,
+    /// The Send and Receive buttons between the two Macs; a layout without them centres them on the conduit.
+    #[serde(default)]
+    pub actions: Option<Rect>,
+}
+
+impl Elements {
+    pub fn actions(&self) -> Rect {
+        self.actions.unwrap_or_else(|| {
+            let [a, c1, c2, b] = layout().conduit;
+            let m = bezier((a, c1, c2, b), 0.5);
+            Rect { x: m[0] - 60.0, y: m[1] - 75.0, w: 120.0, h: 150.0 }
+        })
+    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug)]
@@ -96,6 +109,8 @@ fn hinge(r: Rect) -> (f32, f32, f32) {
     (r.x + r.w / 2.0, r.y + r.w * LID, r.w)
 }
 const POLL_S: f32 = 5.0;
+/// How long a picked Mac takes to grow from the grid into its place.
+const PICK_S: f32 = 0.55;
 
 pub fn is_tooling_arg(a: &str) -> bool {
     ["--snap", "--script", "--tree", "--list-scenes", "--scene", "--size", "--video", "--desktop", "--native", "--trace"].contains(&a)
@@ -143,6 +158,18 @@ pub struct S {
     demo: bool,
     flow: Flow,
     flowing: bool,
+    /// The right side lists the account's Macs to pick from.
+    finding: bool,
+    found_at: f32,
+    /// Whether the bus has been read once since it connected.
+    polled: bool,
+    hovered: String,
+    /// How lit each listed Mac's screen is, 0 (off) to 1.
+    glow: std::collections::HashMap<String, f32>,
+    /// The grid box a picked Mac grows from, and when.
+    picked: Option<(Rect, f32)>,
+    /// 1 while the pointer is on Send, -1 on Receive: the lines show which way it would go.
+    hover_dir: f32,
 }
 
 /// Where the dashes are along their curves, as in WavySync: they speed up towards `dir` (1 runs left to
@@ -212,6 +239,13 @@ fn init() -> S {
         demo: false,
         flow: Flow::default(),
         flowing: false,
+        finding: false,
+        found_at: 0.0,
+        polled: false,
+        hovered: String::new(),
+        glow: Default::default(),
+        picked: None,
+        hover_dir: 0.0,
         cfg,
     }
 }
@@ -245,7 +279,6 @@ impl S {
             name: self.cfg.name.clone(),
             look: self.cfg.look.clone(),
             key: bus::b64(&public),
-            mode: self.cfg.mode,
             chip: self.hw.chip.clone(),
             ram_gb: self.hw.ram_gb,
             disk_gb: self.hw.disk_gb,
@@ -315,13 +348,35 @@ impl S {
         self.requests.iter().map(|(r, _)| r).filter(|r| matches!(r.answer, Answer::Pending | Answer::Accepted)).max_by_key(|r| r.at)
     }
 
-    fn ask(&mut self) {
+    /// Lists the Macs on the account on the right, signing in first if needed.
+    fn find(&mut self) {
+        self.finding = true;
+        self.found_at = self.now;
+        self.picked = None;
+        self.peer.clear();
+        if self.bus.is_none() {
+            self.connect();
+        } else {
+            self.polled_at = -100.0;
+        }
+    }
+
+    /// The Mac clicked in the grid grows from `from` into the right-hand place.
+    fn pick(&mut self, id: String, from: Rect) {
+        self.peer = id;
+        self.picked = Some((from, self.now));
+        self.hovered.clear();
+    }
+
+    /// Asks the other Mac for a session in which this one sends (`Ask::Send`) or receives.
+    fn ask(&mut self, ask: Ask) {
         let (Some(b), peer) = (self.bus.clone(), self.peer.clone()) else { return };
         if peer.is_empty() {
             return;
         }
+        self.hover_dir = 0.0;
         let r = Request {
-            ask: if self.cfg.mode == Mode::Sender { Ask::Send } else { Ask::Receive },
+            ask,
             from: self.cfg.id.clone(),
             to: peer,
             at: bus::now(),
@@ -387,6 +442,7 @@ impl S {
                 self.polling = false;
                 match r {
                     Ok(snap) => {
+                        self.polled = true;
                         self.devices = snap.devices.into_iter().filter(|d| d.id != self.cfg.id).collect();
                         self.devices.sort_by(|a, b| b.seen.cmp(&a.seen));
                         self.requests = snap.requests;
@@ -397,6 +453,7 @@ impl S {
                         if let Some(r) = self.active_request().cloned() {
                             let other = if r.from == self.cfg.id { &r.to } else { &r.from };
                             self.peer = other.clone();
+                            self.finding = false;
                         }
                     }
                     Err(e) => self.err = e,
@@ -418,12 +475,10 @@ impl S {
         self.devices.iter().find(|d| d.id == self.peer)
     }
 
-    /// Whether this Mac sends in the current (or next) transfer.
-    fn sending(&self) -> bool {
-        match self.active_request() {
-            Some(r) => r.sides().0 == self.cfg.id,
-            None => self.cfg.mode == Mode::Sender,
-        }
+    /// Whether this Mac sends in the current session; None before one is asked for. Each session picks its
+    /// own direction, so any Mac can send to or take from any other.
+    fn sending(&self) -> Option<bool> {
+        self.active_request().map(|r| r.sides().0 == self.cfg.id)
     }
 }
 
@@ -473,9 +528,22 @@ fn poll(s: &mut S, now: f64, tx: &mut Tx) -> bool {
         s.poll_bus();
     }
     let live = s.session.as_ref().is_some_and(|x| x.state == "sending");
-    s.flow.dir = if s.sending() { 1.0 } else { -1.0 };
-    s.flow.step(s.flowing || live || !s.busy.is_empty(), dt);
-    tx.wake_after(Duration::from_millis(if s.flow.v != 0.0 { 0 } else { 250 }));
+    s.flow.dir = if s.hover_dir != 0.0 { s.hover_dir } else if s.sending() == Some(false) { -1.0 } else { 1.0 };
+    s.flow.step(s.flowing || live || !s.busy.is_empty() || s.hover_dir != 0.0, dt);
+    let mut lighting = false;
+    for d in &s.devices {
+        let target = if s.finding && s.hovered == d.id { 1.0 } else { 0.0 };
+        let g = s.glow.entry(d.id.clone()).or_insert(0.0);
+        let step = dt / 0.18;
+        *g += (target - *g).clamp(-step, step);
+        lighting |= *g != target;
+    }
+    if s.picked.is_some_and(|(_, t0)| now - t0 >= PICK_S) {
+        s.picked = None;
+        s.finding = false;
+    }
+    let moving = s.flow.v != 0.0 || lighting || s.picked.is_some() || (s.finding && now - s.found_at < 1.2);
+    tx.wake_after(Duration::from_millis(if moving { 0 } else { 250 }));
     true
 }
 
@@ -691,6 +759,154 @@ fn device_on_screen(s: &S, key: &str, d: Option<&Device>, look: &Look, place: Re
     out
 }
 
+/// A small MacBook: its screen is off until `glow` lights it and shows the Mac's name. `alpha` fades it all.
+fn mini(key: &str, d: &Device, r: Rect, glow: f32, alpha: f32) -> Vec<El> {
+    let Some((m, c)) = look::resolve(&d.look) else { return vec![] };
+    let (cx, hy, width) = hinge(r);
+    let drawn = look::laptop(key, m, c, cx, hy, width);
+    let [x, y, w, h] = drawn.screen;
+    let mut out: Vec<El> = drawn.layers.into_iter().map(|e| e.opacity(alpha)).collect();
+    if glow > 0.0 {
+        let halo = el().key(format!("{key}-halo")).absolute(x - w * 0.08, y - w * 0.08).size(w * 1.16, h + w * 0.16).radius(w * 0.08)
+            .fill(Color { a: 0.45 * glow, ..BLUE2 }).blur(w * 0.09).opacity(alpha);
+        out.insert(1.min(out.len()), halo);
+        out.push(el().key(format!("{key}-lit")).absolute(x, y).size(w, h).radius(w * 0.012).opacity(alpha * glow)
+            .linear_gradient(2.4, [(0.0, Color { r: 0.03, g: 0.12, b: 0.42, a: 1.0 }), (0.55, Color { r: 0.012, g: 0.05, b: 0.18, a: 1.0 }), (1.0, Color { r: 0.05, g: 0.2, b: 0.55, a: 1.0 })]));
+        let size = (w / (d.name.chars().count().max(5) as f32 * 0.6)).min(h * 0.3).min(24.0);
+        out.push(col().key(format!("{key}-name")).absolute(x, y).size(w, h).center().gap(size * 0.2).opacity(alpha * glow)
+            .child(label(d.name.clone(), size, 700.0, INK))
+            .child(mono(format!("#{}", d.id), (size * 0.5).max(8.0), ICE)));
+    } else {
+        // The display switched off: plain black glass.
+        out.push(el().key(format!("{key}-off")).absolute(x, y).size(w, h).radius(w * 0.012).fill(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }).opacity(alpha));
+    }
+    out
+}
+
+/// Laptop boxes for `n` Macs in the right-hand place, rows of up to three, a short last row centred.
+fn grid_cells(n: usize) -> Vec<Rect> {
+    let r = layout().elements.laptop_right;
+    let cols = match n {
+        0 | 1 => 1,
+        2 | 4 => 2,
+        _ => 3,
+    };
+    let rows = n.div_ceil(cols).max(1);
+    let (ax, ay, aw, ah) = (r.x - 40.0, r.y + 40.0, r.w + 80.0, r.h - 40.0);
+    let (cw, ch) = (aw / cols as f32, ah / rows as f32);
+    let w = (cw * 0.78).min(ch * 0.85 / 0.935).min(170.0);
+    (0..n).map(|i| {
+        let (c, row_) = (i % cols, i / cols);
+        let in_row = (n - row_ * cols).min(cols);
+        let x0 = ax + (aw - in_row as f32 * cw) / 2.0 + c as f32 * cw;
+        Rect { x: x0 + (cw - w) / 2.0, y: ay + row_ as f32 * ch + (ch - w * 0.935) / 2.0, w, h: w * 0.935 }
+    }).collect()
+}
+
+fn ease(t: f32) -> f32 {
+    1.0 - (1.0 - t).powi(3)
+}
+
+/// The account's Macs, screens off; the one under the pointer lights up. A click grows it into its place
+/// while the rest fade.
+fn grid(s: &S) -> Vec<El> {
+    let r = layout().elements.laptop_right;
+    let pick = s.picked.map(|(from, t0)| (from, ease(((s.now - t0) / PICK_S).clamp(0.0, 1.0))));
+    let fade = pick.map(|(_, t)| 1.0 - t).unwrap_or(1.0);
+    let status = if !s.err.is_empty() {
+        (s.err.clone(), ERR)
+    } else if !s.polled {
+        (s.t("Looking on GitHub…", "GitHub'da aranıyor…"), SOFT)
+    } else if s.devices.is_empty() {
+        (s.t("No other Mac yet: open MacySync on it and save it here.", "Henüz başka Mac yok: onda MacySync'i aç ve buraya kaydet."), SOFT)
+    } else {
+        (s.t("Point at a Mac to wake it, click to pick it.", "Uyandırmak için üstüne gel, seçmek için tıkla."), MUTED)
+    };
+    let centred = |e: El| row().w_full().child(spacer()).child(e).child(spacer());
+    let mut out = vec![col().key("grid-head").absolute(r.x - 40.0, r.y).w(r.w + 80.0).gap(4.0).opacity(fade)
+        .child(centred(caps(s.t("MACS ON THIS ACCOUNT", "HESAPTAKİ MAC'LER"), SILVER)))
+        .child(centred(label(status.0, 11.5, 500.0, status.1)))];
+    let cells = grid_cells(s.devices.len());
+    for (i, (d, cell)) in s.devices.iter().zip(cells).enumerate() {
+        if pick.is_some() && d.id == s.peer {
+            continue;
+        }
+        let alpha = ((s.now - s.found_at - 0.07 * i as f32) / 0.35).clamp(0.0, 1.0) * fade;
+        if alpha <= 0.0 {
+            continue;
+        }
+        let key = format!("g-{}", d.id);
+        out.extend(mini(&key, d, cell, s.glow.get(&d.id).copied().unwrap_or(0.0), alpha));
+        if pick.is_none() {
+            let (id, id2) = (d.id.clone(), d.id.clone());
+            out.push(el().key(format!("{key}-hit")).absolute(cell.x - cell.w * 0.07, cell.y).size(cell.w * 1.14, cell.h).cursor(Cursor::Pointer)
+                .on_hover_change(move |s: &mut S, inside, _| {
+                    if inside {
+                        s.hovered = id.clone();
+                    } else if s.hovered == id {
+                        s.hovered.clear();
+                    }
+                })
+                .on_press(move |s: &mut S| s.pick(id2.clone(), cell)));
+        }
+    }
+    if let (Some((from, t)), Some(d)) = (pick, s.peer_device()) {
+        let lerp = |a: f32, b: f32| a + (b - a) * t;
+        let to = Rect { x: lerp(from.x, r.x), y: lerp(from.y, r.y), w: lerp(from.w, r.w), h: lerp(from.h, r.h) };
+        out.extend(mini("right", d, to, 1.0, 1.0));
+    }
+    out
+}
+
+/// The right-hand place before a Mac is picked: a dim laptop with its screen off and the find button.
+fn find_prompt(s: &S) -> Vec<El> {
+    let r = layout().elements.laptop_right;
+    let ghost = Device { look: s.cfg.look.clone(), ..Device::default() };
+    let mut out = mini("right", &ghost, r, 0.0, 0.3);
+    let (cx, cy) = (r.x + r.w / 2.0, r.y + r.w * LID * 0.5);
+    let note = if s.cfg.bus.is_empty() { s.t("signs in to GitHub", "GitHub'a bağlanır") } else { s.cfg.bus.clone() };
+    let centred = |e: El| row().w_full().child(spacer()).child(e).child(spacer());
+    out.push(col().key("find").absolute(cx - 150.0, cy - 30.0).w(300.0).gap(8.0)
+        .child(centred(button(s.t("Find Macs on this account", "Hesaptaki Mac'leri bul"), true).key("find-btn").on_press(|s: &mut S| s.find())))
+        .child(centred(mono(note, 10.0, MUTED))));
+    out
+}
+
+/// Send and Receive between the two Macs: the direction is chosen per session. Pointing at one runs the
+/// lines that way first.
+fn actions(s: &S) -> Option<El> {
+    let d = s.peer_device().filter(|_| !s.finding)?;
+    let r = layout().elements.actions();
+    if let Some(req) = s.active_request() {
+        return (req.answer == Answer::Pending && req.from == s.cfg.id).then(|| {
+            col().key("actions").absolute(r.x - 30.0, r.y + r.h / 2.0 - 52.0).w(r.w + 60.0)
+                .child(row().w_full().child(spacer()).child(mono(s.t("waiting for approval…", "onay bekleniyor…"), 10.5, ICE)).child(spacer()))
+        });
+    }
+    let pill = |key: &str, text: String, dir: f32, help: String| {
+        let on = s.hover_dir == dir;
+        el().key(key).w_full().h(34.0).center().radius(17.0).cursor(Cursor::Pointer)
+            .fill(if on { BLUE } else { PANEL2 }).border(1.0, if on { BLUE2 } else { EDGE })
+            .shadow(10.0, 24.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.45 })
+            .child(label(text, 13.0, 700.0, INK))
+            .help(help)
+            .on_hover_change(move |s: &mut S, inside, _| {
+                if inside {
+                    s.hover_dir = dir;
+                } else if s.hover_dir == dir {
+                    s.hover_dir = 0.0;
+                }
+            })
+            .on_press(move |s: &mut S| s.ask(if dir > 0.0 { Ask::Send } else { Ask::Receive }))
+    };
+    Some(col().key("actions").absolute(r.x, r.y).size(r.w, r.h)
+        .child(pill("send", format!("{}  ⟶", s.t("Send", "Gönder")), 1.0,
+            format!("{} {}", s.t("This Mac sends to", "Bu Mac şuna gönderir:"), d.name)))
+        .child(spacer())
+        .child(pill("receive", format!("⟵  {}", s.t("Receive", "Al")), -1.0,
+            format!("{} {}", s.t("This Mac takes from", "Bu Mac şundan alır:"), d.name))))
+}
+
 fn card(h: f32) -> El {
     col().w_full().h(h).fill(PANEL).border(1.0, EDGE).radius(14.0).px(14.0).py(12.0).gap(7.0)
 }
@@ -728,23 +944,6 @@ fn kit() -> Kit {
     Kit::from_palette(PaletteSeed { bg: FIELD, fg: INK, accent: BLUE })
 }
 
-fn segmented(s: &S) -> El {
-    let opt = |mode: Mode, text: String| {
-        let on = s.cfg.mode == mode;
-        el().key(format!("mode-{mode:?}")).grow(1.0).h(30.0).center().radius(7.0).cursor(Cursor::Pointer)
-            .fill(if on { BLUE } else { FIELD }).border(1.0, if on { BLUE2 } else { EDGE })
-            .child(caps(text, if on { INK } else { MUTED }))
-            .on_press(move |s: &mut S| {
-                s.cfg.mode = mode;
-                s.cfg.save();
-                if s.cfg.registered {
-                    s.register();
-                }
-            })
-    };
-    row().w_full().gap(6.0).child(opt(Mode::Sender, s.t("SENDER  ⟶", "GÖNDEREN  ⟶"))).child(opt(Mode::Receiver, s.t("⟵  RECEIVER", "⟵  ALAN")))
-}
-
 fn tab_device(s: &S, k: &Kit) -> El {
     let detected = look::guess(&s.hw);
     let (m, _) = look::resolve(&s.cfg.look).unzip();
@@ -778,7 +977,6 @@ fn tab_device(s: &S, k: &Kit) -> El {
             .child(label(format!("{} {name}", s.t("Detected:", "Algılanan:")), 12.0, 500.0, SOFT).wrap().grow(1.0))
             .child(button(s.t("Use it", "Bunu kullan"), false).key("use-detected").on_press(move |s: &mut S| s.set_look(detected.clone()))));
     }
-    c = c.child(caps(s.t("THIS MAC IS", "BU MAC"), MUTED)).child(segmented(s));
     let action = if s.bus.is_none() { s.t("Sign in and save", "Bağlan ve kaydet") } else if s.cfg.registered { s.t("Save again", "Tekrar kaydet") } else { s.t("Save to the bus", "Bus'a kaydet") };
     c.child(row().w_full().center_y().gap(8.0)
         .child(TextInput::new(&s.bus_edit).placeholder(s.t("owner/macysync-bus (empty: yours)", "sahip/macysync-bus (boş: senin)")).width(Some(300.0)).on_edit(|s: &mut S| &mut s.bus_edit).build(k))
@@ -792,35 +990,30 @@ fn ago(s: &S, t: u64) -> String {
 }
 
 fn tab_connect(s: &S) -> El {
-    let mut list = col().w_full().gap(4.0);
-    if s.devices.is_empty() {
-        list = list.child(label(s.t("No other Mac on the bus yet. Open MacySync on the other Mac and save it to the same bus.",
-            "Bus'ta henüz başka Mac yok. Diğer Mac'te MacySync'i aç ve aynı bus'a kaydet."), 12.5, 500.0, SOFT).wrap().w_full());
+    let req = s.active_request();
+    let picked = s.peer_device().is_some() && !s.finding;
+    let done = [s.finding || picked, picked, req.is_some(), req.is_some_and(|r| r.answer == Answer::Accepted)];
+    let steps = [
+        s.t("Find the Macs on this account, on the right.", "Sağda, bu hesaptaki Mac'leri bul."),
+        s.t("Click the Mac to work with.", "Çalışılacak Mac'e tıkla."),
+        s.t("Press Send or Receive between the two. It holds for this session only.", "İkisinin arasında Gönder ya da Al'a bas. Yalnızca bu oturum için geçerli."),
+        s.t("The other Mac approves.", "Diğer Mac onaylar."),
+    ];
+    let current = done.iter().position(|d| !d).unwrap_or(steps.len());
+    let mut c = col().w_full().gap(10.0);
+    for (i, text) in steps.into_iter().enumerate() {
+        let now = i == current;
+        let (mark, fg, bg) = if done[i] { ("✓".to_string(), INK, BLUE) } else if now { ((i + 1).to_string(), INK, PANEL2) } else { ((i + 1).to_string(), MUTED, FIELD) };
+        c = c.child(row().w_full().gap(10.0).center_y()
+            .child(el().size(22.0, 22.0).radius(11.0).center().fill(bg).border(1.0, if now { BLUE2 } else { EDGE }).child(mono(mark, 11.0, fg)))
+            .child(label(text, 13.0, if now { 600.0 } else { 500.0 }, if now { INK } else if done[i] { SOFT } else { MUTED }).wrap().grow(1.0)));
     }
-    for d in &s.devices {
-        let on = d.id == s.peer;
-        let id = d.id.clone();
-        let swatch = look::resolve(&d.look).map(|(_, c)| look::hx(&c.body_hex, STEEL)).unwrap_or(STEEL);
-        list = list.child(row().key(format!("dev-{}", d.id)).w_full().h(42.0).px(10.0).gap(10.0).center_y().radius(9.0).cursor(Cursor::Pointer)
-            .fill(if on { PANEL2 } else { FIELD }).border(1.0, if on { BLUE2 } else { EDGE }).hover(PANEL2)
-            .child(el().size(14.0, 14.0).radius(7.0).fill(swatch))
-            .child(col().gap(1.0).child(label(d.name.clone(), 13.0, 600.0, INK)).child(mono(format!("#{} · {}", d.id, look::model(&d.look.model).map(look::short_name).unwrap_or_default()), 10.0, MUTED)))
-            .child(spacer())
-            .child(mono(ago(s, d.seen), 10.5, if bus::now().saturating_sub(d.seen) < 90 { OK } else { MUTED }))
-            .on_press(move |s: &mut S| s.peer = id.clone()));
-    }
-    let pending = s.active_request();
-    let mut c = col().w_full().gap(8.0).child(list.scroll(ScrollSpec { stick_bottom: false }).scroll_edge_fade(10.0).h(150.0));
-    let state = match pending {
+    let state = match req {
         Some(r) if r.answer == Answer::Pending && r.from == s.cfg.id => s.t("Waiting for the other Mac to approve…", "Diğer Mac'in onayı bekleniyor…"),
-        Some(r) if r.answer == Answer::Accepted => s.t("Approved. Next: pick what goes.", "Onaylandı. Sırada: neyin gideceğini seçmek."),
+        Some(r) if r.answer == Answer::Accepted => s.t("Approved. Next: 03 PICK.", "Onaylandı. Sırada: 03 SEÇ."),
         _ => String::new(),
     };
-    let go = if s.cfg.mode == Mode::Sender { s.t("Ask to send ⟶", "Gönderme isteği yolla ⟶") } else { s.t("⟵ Ask to receive", "⟵ Alma isteği yolla") };
-    let can = !s.peer.is_empty() && pending.is_none();
-    c = c.child(row().w_full().center_y().gap(8.0).child(label(state, 12.0, 600.0, ICE).wrap().grow(1.0))
-        .child(button(go, can).key("ask").opacity(if can { 1.0 } else { 0.5 }).on_press(move |s: &mut S| if can { s.ask() })));
-    c
+    c.child(label(state, 12.0, 600.0, ICE).wrap().w_full())
 }
 
 fn tab_soon(s: &S, what: String) -> El {
@@ -867,13 +1060,17 @@ fn right_panel(s: &S) -> El {
                 .child(mono(format!("{} {} · {}", s.t("started", "başladı"), x.started_utc, x.network), 10.0, MUTED));
         }
         None => {
-            let d = s.peer_device();
-            c = c.child(caps(s.t("OTHER MAC", "DİĞER MAC"), SILVER)).child(label(
-                match d {
-                    Some(d) => format!("{} · {} · {}", d.name, d.user, ago(s, d.seen)),
-                    None => s.t("Pick a Mac in 02 CONNECT.", "02 BAĞLAN'da bir Mac seç."),
-                },
-                13.0, 500.0, SOFT).wrap().w_full());
+            let d = s.peer_device().filter(|_| !s.finding);
+            let mut head = row().w_full().center_y().child(caps(s.t("OTHER MAC", "DİĞER MAC"), SILVER)).child(spacer());
+            if d.is_some() && s.active_request().is_none() {
+                head = head.child(button(s.t("Change", "Değiştir"), false).key("change").on_press(|s: &mut S| s.find()));
+            }
+            let line = match d {
+                Some(d) => format!("{} · {} · {}", d.name, d.user, ago(s, d.seen)),
+                None if s.finding => s.t("Click a Mac above to work with it.", "Çalışmak için yukarıdan bir Mac'e tıkla."),
+                None => s.t("Find the other Mac above.", "Diğer Mac'i yukarıdan bul."),
+            };
+            c = c.child(head).child(label(line, 13.0, 500.0, SOFT).wrap().w_full());
         }
     }
     let status = if !s.busy.is_empty() { (s.busy.clone(), SOFT) } else if !s.err.is_empty() { (s.err.clone(), ERR) } else if s.bus.is_some() { (format!("{} {}", s.t("bus", "bus"), s.cfg.bus), MUTED) } else { (String::new(), MUTED) };
@@ -928,12 +1125,18 @@ fn view(s: &S, _: &mut Cx<S>) -> El {
     let mut root = el().key("root").size(W, H).children(backdrop(s)).children(conduit(s));
     let me = s.me();
     let peer = s.peer_device();
-    let send = s.sending();
-    let (role_me, role_peer) = if send { (s.t("SENDER", "GÖNDEREN"), s.t("RECEIVER", "ALAN")) } else { (s.t("RECEIVER", "ALAN"), s.t("SENDER", "GÖNDEREN")) };
-    let peer_look = peer.map(|d| d.look.clone()).unwrap_or_else(|| Look { model: s.cfg.look.model.clone(), color: String::new() });
+    let (role_me, role_peer) = match s.sending() {
+        Some(true) => (s.t("SENDER", "GÖNDEREN"), s.t("RECEIVER", "ALAN")),
+        Some(false) => (s.t("RECEIVER", "ALAN"), s.t("SENDER", "GÖNDEREN")),
+        None => (s.t("READY", "HAZIR"), if peer.is_some_and(|d| bus::now().saturating_sub(d.seen) < 90) { s.t("ONLINE", "ÇEVRİMİÇİ") } else { s.t("AWAY", "UZAKTA") }),
+    };
+    root = root.children(device_on_screen(s, "left", Some(&me), &s.cfg.look, e.laptop_left, role_me, true));
+    root = match peer {
+        _ if s.finding => root.children(grid(s)),
+        Some(d) => root.children(device_on_screen(s, "right", Some(d), &d.look, e.laptop_right, role_peer, false)),
+        None => root.children(find_prompt(s)),
+    };
     root = root
-        .children(device_on_screen(s, "left", Some(&me), &s.cfg.look, e.laptop_left, role_me, true))
-        .children(device_on_screen(s, "right", peer, &peer_look, e.laptop_right, role_peer, false).into_iter().map(|e| if peer.is_some() { e } else { e.opacity(0.45) }))
         .child(row().absolute(e.title.x, e.title.y).gap(10.0).center_y().window_drag()
             .child(row().child(label("Macy", 26.0, 800.0, INK)).child(label("~", 26.0, 800.0, BLUE2)).child(label("Sync", 26.0, 800.0, SILVER)))
             .child(mono(format!("MCYSY · v{}", env!("CARGO_PKG_VERSION")), 10.5, MUTED)))
@@ -947,6 +1150,9 @@ fn view(s: &S, _: &mut Cx<S>) -> El {
             .child(button("✕", false).key("quit").on_press_tx(|_: &mut S, tx: &mut Tx| tx.quit())))
         .child(left_panel(s, &k))
         .child(col().absolute(e.right_panel.x, e.right_panel.y).w(e.right_panel.w).child(right_panel(s)));
+    if let Some(a) = actions(s) {
+        root = root.child(a);
+    }
     if let Some((r, _)) = &s.incoming {
         root = root.child(incoming(s, r));
     }
@@ -970,9 +1176,20 @@ fn demo(s: &mut S) {
     s.devices = vec![
         Device { id: "c04e19b7".into(), name: "Desk Pro".into(), look: pick("pro", 14.2), chip: "Apple M1".into(), ram_gb: 16, disk_gb: 512, user: "someone".into(), seen: bus::now() - 20, ..Device::default() },
         Device { id: "5b21d0aa".into(), name: "Travel Air".into(), look: pick("air", 13.6), chip: "Apple M2".into(), ram_gb: 8, disk_gb: 256, user: "someone".into(), seen: bus::now() - 7200, ..Device::default() },
+        Device { id: "e8d4a130".into(), name: "Studio 16".into(), look: pick("pro", 16.2), chip: "Apple M3 Max".into(), ram_gb: 48, disk_gb: 1000, user: "someone".into(), seen: bus::now() - 40, ..Device::default() },
+        Device { id: "91fb07c2".into(), name: "Old Air".into(), look: Look { model: look::catalog().iter().rev().find(|m| m.family == "air").map(|m| m.id.clone()).unwrap_or_default(), color: String::new() }, chip: "Apple M1".into(), ram_gb: 8, disk_gb: 256, user: "someone".into(), seen: bus::now() - 90000, ..Device::default() },
     ];
+    s.polled = true;
     s.peer = "c04e19b7".into();
     s.tab = 2;
+}
+
+/// The grid already shown, nothing picked.
+fn finding_scene(s: &mut S) {
+    demo(s);
+    s.peer.clear();
+    s.finding = true;
+    s.found_at = -5.0;
 }
 
 fn init_demo() -> S {
@@ -983,7 +1200,6 @@ fn init_demo() -> S {
 
 fn sending_scene(s: &mut S, this_sends: bool) {
     demo(s);
-    s.cfg.mode = if this_sends { Mode::Sender } else { Mode::Receiver };
     let (a, b) = if this_sends { ("7f3a2c91", "c04e19b7") } else { ("c04e19b7", "7f3a2c91") };
     let r = Request { ask: Ask::Send, from: a.into(), to: b.into(), at: bus::now() - 300, answer: Answer::Accepted, transfer: bus::transfer_dir(bus::now() - 280, a, b) };
     s.requests = vec![(r, String::new())];
@@ -1009,6 +1225,10 @@ pub fn run(demo_mode: bool) {
         families: ("Inter", "ui-monospace"),
         scenes: &[
             ("connect", |s| demo(s)),
+            ("start", |s| { demo(s); s.peer.clear(); }),
+            ("find", |s| { finding_scene(s); s.hovered = "5b21d0aa".into(); s.glow.insert("5b21d0aa".into(), 1.0); }),
+            ("pick", |s| { finding_scene(s); let c = grid_cells(s.devices.len())[0]; s.pick("c04e19b7".into(), c); s.picked = Some((c, 1.5 - 0.22)); }),
+            ("hover-send", |s| { demo(s); s.hover_dir = 1.0; s.flow.dir = 1.0; s.flow.v = FLOW_V; s.flow.pos = 0.3; }),
             ("device", |s| { demo(s); s.tab = 1; }),
             ("models", |s| { demo(s); s.tab = 1; s.model_open = true; }),
             ("request", |s| { demo(s); s.incoming = Some((Request { ask: Ask::Send, from: "c04e19b7".into(), to: "7f3a2c91".into(), at: bus::now(), answer: Answer::Pending, transfer: String::new() }, String::new())); }),

@@ -22,7 +22,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::me::{Look, Mode};
+use crate::me::Look;
 
 const API: &str = "https://api.github.com";
 
@@ -119,7 +119,6 @@ pub struct Device {
     pub look: Look,
     /// The X25519 public key, base64.
     pub key: String,
-    pub mode: Mode,
     pub chip: String,
     pub ram_gb: u64,
     pub disk_gb: u64,
