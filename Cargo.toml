@@ -1,0 +1,36 @@
+[package]
+name = "macysync"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Move a Mac to a new Mac: the old one offers, the new one picks, an AI agent sets it up."
+repository = "https://github.com/Ege-BULUT/MacySync"
+
+[dependencies]
+rune = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789", default-features = false, features = ["accessibility", "embedded-fonts", "metal-backend", "svg", "tooling"] }
+rune-kit = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789" }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+ureq = { version = "3", features = ["json"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }
+crypto_box = { version = "0.9", features = ["seal", "chacha20"] }
+chacha20poly1305 = { version = "0.10", features = ["stream"] }
+base64 = "0.22"
+
+[patch.crates-io]
+winit = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789" }
+sctk-adwaita = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789" }
+parley_engine = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789" }
+wgpu-hal = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789" }
+accesskit_windows = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789" }
+accesskit_macos = { git = "https://github.com/anomalyco/rune", rev = "beffc254ef86adc59c090018ebb958dfc7990789" }
+
+[profile.release]
+lto = "thin"
+strip = true
+
+[profile.dev]
+debug = 0
+
+[profile.dev.package."*"]
+opt-level = 2

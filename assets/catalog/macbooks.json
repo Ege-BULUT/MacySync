@@ -1,0 +1,12 @@
+{"placeholder": true, "models": [
+ {"id": "mbp13-m1", "family": "pro", "marketing_name": "MacBook Pro (13-inch, M1, 2020)", "year": 2020, "chips": ["M1"], "screen_in": 13.3, "size_label": "13-inch",
+  "model_identifiers": ["MacBookPro17,1"], "design": {"lid": "flat", "notch": false, "touch_bar": true, "function_row": "touch-bar", "bezel": "thick", "dimensions_mm": {"width": 304.1, "depth": 212.4, "height": 15.6}},
+  "colors": [{"name": "Space Gray", "body_hex": "#7d7e80", "body_hex_dark": "#4a4b4d", "keyboard_hex": "#111111"}, {"name": "Silver", "body_hex": "#d6d7d9", "body_hex_dark": "#9a9b9d", "keyboard_hex": "#111111"}],
+  "part_numbers": {"MYD82": "Space Gray", "MYDA2": "Silver"}},
+ {"id": "mbp14-m1pro", "family": "pro", "marketing_name": "MacBook Pro (14-inch, 2021)", "year": 2021, "chips": ["M1 Pro", "M1 Max"], "screen_in": 14.2, "size_label": "14-inch",
+  "model_identifiers": ["MacBookPro18,3", "MacBookPro18,4"], "design": {"lid": "flat", "notch": true, "touch_bar": false, "function_row": "full-height", "bezel": "thin", "dimensions_mm": {"width": 312.6, "depth": 221.2, "height": 15.5}},
+  "colors": [{"name": "Space Gray", "body_hex": "#6e6f72", "body_hex_dark": "#3f4043", "keyboard_hex": "#0d0d0d"}, {"name": "Silver", "body_hex": "#d9dadc", "body_hex_dark": "#a0a1a3", "keyboard_hex": "#0d0d0d"}], "part_numbers": {}},
+ {"id": "mba13-m2", "family": "air", "marketing_name": "MacBook Air (M2, 2022)", "year": 2022, "chips": ["M2"], "screen_in": 13.6, "size_label": "13-inch",
+  "model_identifiers": ["Mac14,2"], "design": {"lid": "flat", "notch": true, "touch_bar": false, "function_row": "full-height", "bezel": "thin", "dimensions_mm": {"width": 304.1, "depth": 215.0, "height": 11.3}},
+  "colors": [{"name": "Midnight", "body_hex": "#2e3642", "body_hex_dark": "#1a1f27", "keyboard_hex": "#0d0d0d"}, {"name": "Starlight", "body_hex": "#e3dccf", "body_hex_dark": "#b3ab9d", "keyboard_hex": "#0d0d0d"}], "part_numbers": {}}
+]}
