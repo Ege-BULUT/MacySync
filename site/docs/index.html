@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs: how to move a Mac with MacySync</title>
+<meta name="description" content="What MacySync needs, the first run, finding and pairing Macs, picking and moving, the setup agent, security and the command line.">
+<link rel="canonical" href="https://macysync.vercel.app/docs/">
+<meta name="google-site-verification" content="s66rd8O_x1saL6PLGpSpIPeHmGazHyTo27NTPkK-GJg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MacySync">
+<meta property="og:url" content="https://macysync.vercel.app/docs/">
+<meta property="og:title" content="Docs: how to move a Mac with MacySync">
+<meta property="og:description" content="What MacySync needs, the first run, finding and pairing Macs, picking and moving, the setup agent, security and the command line.">
+<meta property="og:image" content="https://macysync.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Docs: how to move a Mac with MacySync">
+<meta name="twitter:description" content="What MacySync needs, the first run, finding and pairing Macs, picking and moving, the setup agent, security and the command line.">
+<meta name="twitter:image" content="https://macysync.vercel.app/og.png">
+<meta name="theme-color" content="#0a0e14">
+<link rel="alternate" hreflang="en" href="https://macysync.vercel.app/docs/">
+<link rel="alternate" hreflang="tr" href="https://macysync.vercel.app/tr/docs/">
+<link rel="alternate" hreflang="x-default" href="https://macysync.vercel.app/docs/">
+<meta property="og:locale" content="en_US">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0e14'/%3E%3Cpath d='M5 19c4-8 8-8 11-3s7 5 11-3' fill='none' stroke='%234c9dff' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="../">Macy<b>~</b>Sync <small>MYSY</small></a>
+    <div class="links">
+      <a href="../#how" class="opt" data-i="nav.how">How it works</a>
+      <a href="../features/" data-i="nav.features">Features</a>
+      <a href="../docs/" class="on" data-i="nav.docs">Docs</a>
+      <a href="../changelog/" class="opt" data-i="nav.changelog">Changelog</a>
+      <a href="../download/" data-i="nav.download">Download</a>
+    </div>
+    <a class="twin-nav to-wavy" href="../wavy/" title="WavySync, the twin app">Wavy<b>~</b></a>
+    <button class="btn lang" id="lang" aria-label="Language">TR</button>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <span class="caps" data-i="docs.k">Docs</span>
+    <h1 data-i="docs.h">How <em>Macy~Sync</em> works</h1>
+    <p class="sub" data-i="docs.p">From the first run to the agent that finishes the setup.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap doc">
+    <aside class="toc"><div class="toc-list">
+      <a href="#status" data-i="dc.t1">Status</a><a href="#need" data-i="dc.t2">What you need</a><a href="#first" data-i="dc.t3">First run</a>
+      <a href="#pair" data-i="dc.t4">Find and pair</a><a href="#move" data-i="dc.t5">Pick and move</a><a href="#agent" data-i="dc.t6">The agent</a>
+      <a href="#security" data-i="dc.t7">Security</a><a href="#cli" data-i="dc.t8">Command line</a>
+    </div></aside>
+    <div class="prose">
+      <div data-l="en">
+        <h2 id="status">Status</h2>
+        <p>MacySync is in early development and not released yet. Working today: each Mac's identity and look, the bus repo, finding the Macs on your account, Send or Receive with approval, the encrypted Mac to Mac stream and the setup brief. Being built now: the Pick tree and the Move screen.</p>
+        <h2 id="need">What you need</h2>
+        <ul><li>Two Macs, both running MacySync.</li><li>One GitHub account, signed in on both (the GitHub CLI works too).</li><li>The two Macs on the same network, or both on Tailscale.</li><li>For the setup step, an agent: Claude Code, Codex, OpenRouter, Ollama or a command of your own.</li></ul>
+        <h2 id="first">First run</h2>
+        <p>MacySync gives the Mac a random eight digit id, takes its computer name, and reads the hardware to guess the model and colour it draws. Change the name and the look on the Device tab. It then makes or picks your private bus repo and registers the Mac there with its public key.</p>
+        <h2 id="pair">Find and pair</h2>
+        <p>On the right, press Find Macs on this account. Point at a Mac to light it up, click to pick it. Between the two, press Send or Receive; the other Mac shows a request and its owner approves it. The direction holds for this session only.</p>
+        <h2 id="move">Pick and move</h2>
+        <p>The sender offers a tree: categories, apps or folders, then the parts of each. The receiver ticks what it wants; ticking a parent ticks every leaf under it. Only the ticked leaves travel, straight from Mac to Mac. Things that can be rebuilt, like caches and <code>node_modules</code>, can be left out.</p>
+        <h2 id="agent">The agent</h2>
+        <p>Each item lands in a staging folder, then in place; whatever was already there is kept. The new Mac writes <code>AGENTS.md</code> and <code>GOAL.md</code> into the transfer folder and runs the agent command you chose, for example:</p>
+        <pre><code>cd {dir} &amp;&amp; claude "Read AGENTS.md and GOAL.md in this folder and do what they say."</code></pre>
+        <h2 id="security">Security</h2>
+        <p>Small things on GitHub (the offer, the picks, the stream key) are sealed boxes to the other Mac's public key (X25519, XSalsa20-Poly1305). The files go as an XChaCha20-Poly1305 stream under a random key only the two Macs know; every frame is authenticated, and a cut stream fails instead of ending early. The device secret stays in a file only you can read.</p>
+        <h2 id="cli">Command line</h2>
+        <pre><code>macysync              open the window
+macysync --demo       the window on made-up Macs; touches nothing
+macysync --detect     what this Mac reports about itself and the look it gets
+macysync --scan       what this Mac can offer, with sizes</code></pre>
+      </div>
+      <div data-l="tr">
+        <h2 id="status">Durum</h2>
+        <p>MacySync erken geliştirme aşamasında, henüz yayınlanmadı. Bugün çalışanlar: her Mac'in kimliği ve görünümü, bus deposu, hesaptaki Mac'leri bulma, onaylı Gönder ya da Al, Mac'ten Mac'e şifreli akış ve kurulum notu. Şu an yapılanlar: Seç ağacı ve Taşı ekranı.</p>
+        <h2 id="need">Ne gerekir</h2>
+        <ul><li>İkisinde de MacySync çalışan iki Mac.</li><li>İkisinde de girişi yapılmış tek bir GitHub hesabı (GitHub CLI da olur).</li><li>Aynı ağda ya da ikisi de Tailscale'de iki Mac.</li><li>Kurulum adımı için bir ajan: Claude Code, Codex, OpenRouter, Ollama ya da kendi komutun.</li></ul>
+        <h2 id="first">İlk açılış</h2>
+        <p>MacySync Mac'e sekiz haneli rastgele bir kimlik verir, bilgisayar adını alır ve çizeceği modeli ve rengi tahmin etmek için donanımı okur. Adı ve görünümü Cihaz sekmesinden değiştirebilirsin. Sonra özel bus deposunu oluşturur ya da seçer ve Mac'i açık anahtarıyla oraya kaydeder.</p>
+        <h2 id="pair">Bul ve eşleş</h2>
+        <p>Sağda Bu hesaptaki Mac'leri bul'a bas. Bir Mac'in üstüne gel, ekranı yansın; tıklayıp seç. İkisinin arasında Gönder ya da Al'a bas; diğer Mac bir istek gösterir ve sahibi onaylar. Yön yalnızca bu oturum için geçerlidir.</p>
+        <h2 id="move">Seç ve taşı</h2>
+        <p>Gönderen bir ağaç sunar: kategoriler, uygulamalar ya da klasörler, sonra her birinin parçaları. Alan istediklerini işaretler; bir üst öğeyi işaretlemek altındaki her şeyi işaretler. Yalnızca işaretlenenler gider, doğrudan Mac'ten Mac'e. Önbellekler ve <code>node_modules</code> gibi yeniden kurulabilenler dışarıda bırakılabilir.</p>
+        <h2 id="agent">Ajan</h2>
+        <p>Her öğe önce bir hazırlık klasörüne, sonra yerine iner; orada zaten olan korunur. Yeni Mac aktarım klasörüne <code>AGENTS.md</code> ve <code>GOAL.md</code> yazar ve seçtiğin ajan komutunu çalıştırır, örneğin:</p>
+        <pre><code>cd {dir} &amp;&amp; claude "Read AGENTS.md and GOAL.md in this folder and do what they say."</code></pre>
+        <h2 id="security">Güvenlik</h2>
+        <p>GitHub'daki küçük şeyler (teklif, seçimler, akış anahtarı) diğer Mac'in açık anahtarına mühürlü kutulardır (X25519, XSalsa20-Poly1305). Dosyalar yalnızca iki Mac'in bildiği rastgele bir anahtarla XChaCha20-Poly1305 akışı olarak gider; her parça doğrulanır, kesilen bir akış erken bitmiş sayılmaz, hata verir. Cihaz sırrı yalnızca senin okuyabildiğin bir dosyada kalır.</p>
+        <h2 id="cli">Komut satırı</h2>
+        <pre><code>macysync              pencereyi açar
+macysync --demo       pencere, uydurma Mac'lerle; hiçbir şeye dokunmaz
+macysync --detect     bu Mac'in kendisi hakkında söyledikleri ve aldığı görünüm
+macysync --scan       bu Mac'in sunabildikleri, boyutlarıyla</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>MacySync · MIT · Ege BULUT</span>
+    <span data-i="foot">Not affiliated with Apple. Mac and MacBook are trademarks of Apple Inc.</span>
+  </div>
+</footer>
+
+<script src="../site.js"></script>
+</body>
+</html>

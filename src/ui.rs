@@ -1197,7 +1197,7 @@ fn view(s: &S, _: &mut Cx<S>) -> El {
     root = root
         .child(row().absolute(e.title.x, e.title.y).gap(10.0).center_y().window_drag()
             .child(row().child(label("Macy", 26.0, 800.0, INK)).child(label("~", 26.0, 800.0, BLUE2)).child(label("Sync", 26.0, 800.0, SILVER)))
-            .child(mono(format!("MCYSY · v{}", env!("CARGO_PKG_VERSION")), 10.5, MUTED)))
+            .child(mono(format!("MYSY · v{}", env!("CARGO_PKG_VERSION")), 10.5, MUTED)))
         .child(row().absolute(e.controls.x, e.controls.y).gap(6.0)
             .child(button(if s.tr { "EN" } else { "TR" }, false).key("lang").help(s.t("Türkçe", "English")).on_press(|s: &mut S| {
                 s.tr = !s.tr;

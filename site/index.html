@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MacySync: move a Mac to a new Mac, end-to-end encrypted</title>
+<meta name="description" content="MacySync moves one Mac to another: apps with their settings, keys, dotfiles and the folders you pick. Any Mac sends or receives, files go straight Mac to Mac, end-to-end encrypted, and an AI agent finishes the setup.">
+<link rel="canonical" href="https://macysync.vercel.app/">
+<meta name="google-site-verification" content="s66rd8O_x1saL6PLGpSpIPeHmGazHyTo27NTPkK-GJg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MacySync">
+<meta property="og:url" content="https://macysync.vercel.app/">
+<meta property="og:title" content="MacySync: move a Mac to a new Mac, end-to-end encrypted">
+<meta property="og:description" content="MacySync moves one Mac to another: apps with their settings, keys, dotfiles and the folders you pick. Any Mac sends or receives, files go straight Mac to Mac, end-to-end encrypted, and an AI agent finishes the setup.">
+<meta property="og:image" content="https://macysync.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MacySync: move a Mac to a new Mac, end-to-end encrypted">
+<meta name="twitter:description" content="MacySync moves one Mac to another: apps with their settings, keys, dotfiles and the folders you pick. Any Mac sends or receives, files go straight Mac to Mac, end-to-end encrypted, and an AI agent finishes the setup.">
+<meta name="twitter:image" content="https://macysync.vercel.app/og.png">
+<meta name="theme-color" content="#0a0e14">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "MacySync", "applicationCategory": "UtilitiesApplication", "operatingSystem": "macOS", "url": "https://macysync.vercel.app/", "softwareVersion": "0.1.0", "license": "https://opensource.org/licenses/MIT", "image": "https://macysync.vercel.app/og.png", "description": "MacySync moves one Mac to another: apps with their settings, keys, dotfiles and the folders you pick. Any Mac sends or receives, files go straight Mac to Mac, end-to-end encrypted, and an AI agent finishes the setup.", "author": {"@type": "Person", "name": "Ege BULUT", "url": "https://github.com/Ege-BULUT"}, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}}</script>
+<link rel="alternate" hreflang="en" href="https://macysync.vercel.app/">
+<link rel="alternate" hreflang="tr" href="https://macysync.vercel.app/tr/">
+<link rel="alternate" hreflang="x-default" href="https://macysync.vercel.app/">
+<meta property="og:locale" content="en_US">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0e14'/%3E%3Cpath d='M5 19c4-8 8-8 11-3s7 5 11-3' fill='none' stroke='%234c9dff' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="./">Macy<b>~</b>Sync <small>MYSY</small></a>
+    <div class="links">
+      <a href="#how" class="opt" data-i="nav.how">How it works</a>
+      <a href="features/" data-i="nav.features">Features</a>
+      <a href="docs/" data-i="nav.docs">Docs</a>
+      <a href="changelog/" class="opt" data-i="nav.changelog">Changelog</a>
+      <a href="download/" data-i="nav.download">Download</a>
+    </div>
+    <a class="twin-nav to-wavy" href="wavy/" title="WavySync, the twin app">Wavy<b>~</b></a>
+    <button class="btn lang" id="lang" aria-label="Language">TR</button>
+  </div>
+</nav>
+
+<header class="hero">
+  <svg class="bg" viewBox="0 0 1440 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <path class="tilde-fill" opacity=".55" d="M -40 120 H 520 C 640 120 660 210 720 300 C 760 360 800 380 900 380 H 1500 V 760 H 960 C 840 760 800 680 760 600 C 720 530 690 500 590 500 H -40 Z"/>
+    <path class="swift base" d="M -40 640 C 300 640 420 420 720 400 S 1160 170 1500 150"/>
+    <path class="swift a" d="M -40 640 C 300 640 420 420 720 400 S 1160 170 1500 150"/>
+    <path class="swift b" d="M -40 690 C 320 690 440 470 720 440 S 1140 220 1500 200"/>
+    <path class="swift c" d="M 20 90 C 160 20 340 0 560 40"/>
+    <path class="swift c" style="animation-delay:-1.4s" d="M 900 720 C 1080 750 1260 720 1440 640"/>
+  </svg>
+  <div class="wrap hero-grid">
+    <div>
+      <img class="logo" src="logo.svg" alt="MYSY, MacySync logo">
+      <h1 data-i="hero.h">Your new Mac,&nbsp;&nbsp;<em>already yours.</em></h1>
+      <p class="lead" data-i="hero.p">Macy~Sync moves one Mac to another: apps with their settings, keys, dotfiles and the folders you pick. Any Mac sends or receives, files go straight from Mac to Mac, end-to-end encrypted, and an AI agent of your choice finishes the setup.</p>
+      <div class="cta">
+        <a class="btn red" href="#how" data-i="hero.how">How it works</a>
+        <a class="btn" href="changelog/" data-i="hero.status">Where it stands</a>
+      </div>
+      <div class="ticker"><span>MacY.<b>SYnc</b></span><span>MAC ⇄ MAC</span><span>Coded in Rust &amp; Rune</span><span>MIT</span></div>
+    </div>
+    <div class="shot"><img src="sending.png" width="2560" height="1560" alt="MacySync window: this Mac on the left sending to the other Mac on the right, with the transfer's progress"></div>
+  </div>
+</header>
+
+<svg class="divider" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true"><path d="M0 50 C 360 50 420 14 720 14 S 1080 50 1440 50"/><path class="run" d="M0 50 C 360 50 420 14 720 14 S 1080 50 1440 50"/></svg>
+
+<section id="how">
+  <div class="wrap">
+    <span class="caps" data-i="how.k">How it works</span>
+    <h2 data-i="how.h">GitHub introduces them, <em>the Macs talk direct</em></h2>
+    <p class="sub" data-i="how.p">Your Macs meet in a private GitHub repo of yours. The files never go there: they travel from one Mac to the other.</p>
+
+    <div class="stage reveal">
+      <div class="stage-head"><span class="caps">01</span><h3 data-i="d1.h">Any Mac sends, any Mac receives</h3><p data-i="d1.p">Like a remote desktop app: pick the other Mac, then Send or Receive. It holds for that session only.</p></div>
+      <svg viewBox="0 0 1100 380" role="img" aria-label="Two Macs meet in a private GitHub repo and send files to each other directly">
+        <defs>
+          <linearGradient id="wireGrad" x1="0" x2="1"><stop offset="0" stop-color="#2563c9"/><stop offset="1" stop-color="#b9c8dc"/></linearGradient>
+        </defs>
+        <path id="c1" class="wire" d="M 150 230 C 150 150 300 100 400 100"/>
+        <path id="c2" class="wire" d="M 700 100 C 800 100 950 150 950 230"/>
+        <path class="wire hot" d="M 150 230 C 150 150 300 100 400 100"/>
+        <path class="wire hot" style="animation-delay:-.6s" d="M 700 100 C 800 100 950 150 950 230"/>
+        <path id="dw" class="wire" d="M 265 300 C 420 300 450 340 550 340 S 690 300 835 300"/>
+        <path class="wire hot" style="stroke-width:4" d="M 265 300 C 420 300 450 340 550 340 S 690 300 835 300"/>
+
+        <g class="node repo" transform="translate(400 20)">
+          <rect width="300" height="170" rx="20"/>
+          <text class="t" x="22" y="38">you / macysync-bus</text>
+          <text class="s" x="22" y="60" data-i="d1.repo">Private GitHub repo: the meeting point</text>
+          <text class="folder on" x="22" y="98">▸ devices/</text>
+          <text class="folder on" style="animation-delay:1s" x="22" y="124">▸ requests/</text>
+          <text class="folder on" style="animation-delay:2s" x="22" y="150">▸ transfers/</text>
+        </g>
+        <g class="node" transform="translate(35 240)"><rect width="230" height="100" rx="16"/><rect class="scr" x="14" y="16" width="44" height="32" rx="5"/><text class="t" x="72" y="38" data-i="d1.old">Old Mac</text><text class="s" x="72" y="60">#7f3a2c91</text><text class="s" x="72" y="82" fill="#4c9dff" data-i="d1.send">sends</text></g>
+        <g class="node" transform="translate(835 240)"><rect width="230" height="100" rx="16"/><rect class="scr" x="14" y="16" width="44" height="32" rx="5"/><text class="t" x="72" y="38" data-i="d1.new">New Mac</text><text class="s" x="72" y="60">#c04e19b7</text><text class="s" x="72" y="82" fill="#4fd18b" data-i="d1.recv">receives</text></g>
+        <text class="s" x="30" y="112" fill="#8e9bad" style="font:500 12px var(--mono)" data-i="d1.ctl">ids, requests, sealed keys</text>
+        <text class="s" x="550" y="372" text-anchor="middle" fill="#8e9bad" style="font:500 12px var(--mono)" data-i="d1.files">files: Mac to Mac, end-to-end encrypted</text>
+        <circle class="pkt v" r="5"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#c1"/></animateMotion></circle>
+        <circle class="pkt v" r="5"><animateMotion dur="3s" begin="1.5s" repeatCount="indefinite"><mpath href="#c2"/></animateMotion></circle>
+        <circle class="pkt" r="7"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#dw"/></animateMotion></circle>
+        <circle class="pkt" r="7"><animateMotion dur="2.4s" begin=".8s" repeatCount="indefinite"><mpath href="#dw"/></animateMotion></circle>
+        <circle class="pkt" r="7"><animateMotion dur="2.4s" begin="1.6s" repeatCount="indefinite"><mpath href="#dw"/></animateMotion></circle>
+      </svg>
+    </div>
+
+    <div class="stage reveal">
+      <div class="stage-head"><span class="caps">02</span><h3 data-i="d2.h">From one Mac to the next</h3></div>
+      <div class="steps">
+        <div class="rail" aria-hidden="true"><svg viewBox="0 0 1000 30" preserveAspectRatio="none"><path d="M0 15 C 100 0 150 30 250 15 S 400 0 500 15 S 650 30 750 15 S 900 0 1000 15" fill="none" stroke="#2a3749" stroke-width="2"/><circle r="6" fill="#4c9dff"><animateMotion dur="10s" repeatCount="indefinite" path="M0 15 C 100 0 150 30 250 15 S 400 0 500 15 S 650 30 750 15 S 900 0 1000 15"/></circle></svg></div>
+        <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg></div><span class="n">01</span><h4 data-i="s1.h">Find</h4><p data-i="s1.p">The Macs on your account show up as small laptops. Point at one to wake it, click to pick it.</p></div>
+        <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 8h15l-4-4M20 16H5l4 4"/></svg></div><span class="n">02</span><h4 data-i="s2.h">Ask</h4><p data-i="s2.p">Press Send or Receive. The other Mac asks its owner to approve.</p></div>
+        <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div><span class="n">03</span><h4 data-i="s3.h">Pick</h4><p data-i="s3.p">The sender offers a tree of what it has; the receiver ticks what it wants.</p></div>
+        <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 6h10l6 6-6 6H4z"/></svg></div><span class="n">04</span><h4 data-i="s4.h">Move</h4><p data-i="s4.p">Only the picks travel, Mac to Mac and encrypted. A cut connection resumes.</p></div>
+        <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/></svg></div><span class="n">05</span><h4 data-i="s5.h">Set up</h4><p data-i="s5.p">Everything lands in place, then an AI agent of your choice wires up the rest.</p></div>
+      </div>
+    </div>
+
+    <div class="stage reveal">
+      <div class="stage-head"><span class="caps">03</span><h3 data-i="d3.h">Apps arrive set up, not just copied</h3><p data-i="d3.p">The new Mac writes AGENTS.md and GOAL.md for the transfer and hands them to your agent.</p></div>
+      <div class="deps">
+        <div class="wcard">
+          <div class="caps" style="margin-bottom:10px" data-i="d3.w">Picked</div>
+          <div class="row"><span class="chk">✓</span>Karabiner-Elements</div>
+          <div class="row"><span class="chk">✓</span>Opensidian</div>
+          <div class="row"><span class="chk">✓</span>Brewfile</div>
+          <div class="row"><span class="chk">✓</span>Tailscale</div>
+        </div>
+        <div class="chips">
+          <div class="chip"><b>place</b>~/.config/karabiner<span class="ok">✓ placed</span></div>
+          <div class="chip"><b>agent</b>open the vault in Opensidian<span class="ok">✓ wired</span></div>
+          <div class="chip"><b>agent</b>brew bundle --file Brewfile<span class="ok">✓ installed</span></div>
+          <div class="chip"><b>flag</b>Tailscale: sign in again<span class="ok">✓ noted</span></div>
+        </div>
+      </div>
+    </div>
+    <a class="more" href="docs/" data-i="more.docs">Read the docs →</a>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <span class="caps" data-i="f.k">Features</span>
+    <h2 data-i="f.h">What makes the move painless</h2>
+    <p class="sub" data-i="f.p">One small app on both Macs. Each Mac knows who it is, what it looks like and what it can offer.</p>
+    <div class="grid">
+      <div class="card reveal"><span class="k">EITHER WAY</span><h3 data-i="f1.h">Send or Receive, every time</h3><p data-i="f1.p">No fixed sender. Any Mac sends to or takes from another, chosen per session.</p></div>
+      <div class="card reveal"><span class="k">PICK</span><h3 data-i="f2.h">A tree you tick</h3><p data-i="f2.p">Categories, then apps and folders, then the parts of each app. Ticking a parent ticks everything under it.</p></div>
+      <div class="card reveal"><span class="k">DIRECT</span><h3 data-i="f3.h">Mac to Mac, not via a cloud</h3><p data-i="f3.p">Files go over your network or Tailscale. GitHub only carries who is who and the sealed keys.</p></div>
+      <div class="card reveal"><span class="k">SEALED</span><h3 data-i="f4.h">End-to-end encrypted</h3><p data-i="f4.p">Offers and keys are sealed to each Mac's own key; files stream under a key only the two Macs know.</p></div>
+      <div class="card reveal"><span class="k">AGENT</span><h3 data-i="f5.h">An agent finishes the job</h3><p data-i="f5.p">Claude Code, Codex, OpenRouter, Ollama or your own command: it reads the brief and sets things up.</p></div>
+      <div class="card reveal"><span class="k">NATIVE</span><h3 data-i="f6.h">Small Rust app</h3><p data-i="f6.p">One binary, drawn with Rune. Each Mac draws itself as the model and colour it really is.</p></div>
+    </div>
+    <a class="more" href="features/" data-i="more.f">All features →</a>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap">
+    <span class="caps" data-i="g.k">The app</span>
+    <h2 data-i="g.h"><em>Macy~Sync</em> Launcher</h2>
+    <div class="gallery">
+      <figure class="reveal"><img src="start.png" width="2560" height="1560" alt="This Mac on the left, the other Mac still to find" loading="lazy"><figcaption data-i="g1">01 · This Mac on the left, the other one still to find</figcaption></figure>
+      <figure class="reveal"><img src="find.png" width="2560" height="1560" alt="The Macs on this account" loading="lazy"><figcaption data-i="g2">02 · The Macs on this account, screens off until you point at one</figcaption></figure>
+      <figure class="reveal"><img src="hover-send.png" width="2560" height="1560" alt="Send or Receive between the two Macs" loading="lazy"><figcaption data-i="g3">03 · Send or Receive, picked for this session</figcaption></figure>
+      <figure class="reveal"><img src="request.png" width="2560" height="1560" alt="The other Mac approves" loading="lazy"><figcaption data-i="g4">04 · The other Mac approves</figcaption></figure>
+      <figure class="reveal"><img src="sending.png" width="2560" height="1560" alt="Sending" loading="lazy"><figcaption data-i="g5">Sending: the lines flow toward the receiver</figcaption></figure>
+      <figure class="reveal"><img src="receiving.png" width="2560" height="1560" alt="Receiving" loading="lazy"><figcaption data-i="g6">Receiving: the same transfer from the other Mac</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="layout">
+  <div class="wrap split">
+    <div>
+      <span class="caps" data-i="l.k">In the repo</span>
+      <h2 data-i="l.h">Only the handshake lives on GitHub.</h2>
+      <pre class="tree"><span class="r">you/macysync-bus/</span>          <span class="c"># private</span>
+├── devices/
+│   ├── 7f3a2c91.json    <span class="c"># name, look, public key</span>
+│   └── c04e19b7.json
+├── requests/            <span class="c"># send or receive, to approve</span>
+└── transfers/
+    └── 20261126-0830_7f3a2c91_c04e19b7/
+        ├── offer.sealed <span class="c"># what the sender offers</span>
+        ├── picks.sealed <span class="c"># what the receiver takes</span>
+        └── key.sealed   <span class="c"># stream key and address</span></pre>
+    </div>
+    <div class="never reveal" style="margin-top:58px">
+      <h3 data-i="n.h">Never on GitHub</h3>
+      <ul>
+        <li data-i="n.1">Your files: they go from Mac to Mac</li>
+        <li data-i="n.2">Anything readable about what you move: offers and picks are sealed</li>
+        <li data-i="n.3">Your GitHub sign in: it stays in the system keychain</li>
+        <li data-i="n.4">Anything you leave unticked</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <span class="caps" data-i="dl.k">Download</span>
+    <h2 data-i="dl.h">Get <em>Macy~Sync</em>.</h2>
+    <div class="dl">
+      <div class="os off"><b>macOS</b><span>Apple silicon</span><i data-i="dl.soon">soon</i></div>
+      <div class="os off"><b>macOS</b><span>Intel</span><i data-i="dl.soon2">soon</i></div>
+    </div>
+    <p class="note" data-i="dl.n">Not released yet. The first build comes out when a whole move works end to end.</p>
+    <a class="more" href="download/" data-i="more.dl">Download page →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>MacySync · MIT · Ege BULUT</span>
+    <span data-i="foot">Not affiliated with Apple. Mac and MacBook are trademarks of Apple Inc.</span>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>

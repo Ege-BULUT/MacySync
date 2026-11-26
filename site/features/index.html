@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Features: Send or Receive, pick, move and set up · MacySync</title>
+<meta name="description" content="Any Mac sends or receives, picked per session; tick what you want from a tree; files go Mac to Mac, end-to-end encrypted; an AI agent sets everything up.">
+<link rel="canonical" href="https://macysync.vercel.app/features/">
+<meta name="google-site-verification" content="s66rd8O_x1saL6PLGpSpIPeHmGazHyTo27NTPkK-GJg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MacySync">
+<meta property="og:url" content="https://macysync.vercel.app/features/">
+<meta property="og:title" content="Features: Send or Receive, pick, move and set up · MacySync">
+<meta property="og:description" content="Any Mac sends or receives, picked per session; tick what you want from a tree; files go Mac to Mac, end-to-end encrypted; an AI agent sets everything up.">
+<meta property="og:image" content="https://macysync.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Features: Send or Receive, pick, move and set up · MacySync">
+<meta name="twitter:description" content="Any Mac sends or receives, picked per session; tick what you want from a tree; files go Mac to Mac, end-to-end encrypted; an AI agent sets everything up.">
+<meta name="twitter:image" content="https://macysync.vercel.app/og.png">
+<meta name="theme-color" content="#0a0e14">
+<link rel="alternate" hreflang="en" href="https://macysync.vercel.app/features/">
+<link rel="alternate" hreflang="tr" href="https://macysync.vercel.app/tr/features/">
+<link rel="alternate" hreflang="x-default" href="https://macysync.vercel.app/features/">
+<meta property="og:locale" content="en_US">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0e14'/%3E%3Cpath d='M5 19c4-8 8-8 11-3s7 5 11-3' fill='none' stroke='%234c9dff' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../site.css">
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="../">Macy<b>~</b>Sync <small>MYSY</small></a>
+    <div class="links">
+      <a href="../#how" class="opt" data-i="nav.how">How it works</a>
+      <a href="../features/" class="on" data-i="nav.features">Features</a>
+      <a href="../docs/" data-i="nav.docs">Docs</a>
+      <a href="../changelog/" class="opt" data-i="nav.changelog">Changelog</a>
+      <a href="../download/" data-i="nav.download">Download</a>
+    </div>
+    <a class="twin-nav to-wavy" href="../wavy/" title="WavySync, the twin app">Wavy<b>~</b></a>
+    <button class="btn lang" id="lang" aria-label="Language">TR</button>
+  </div>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <span class="caps" data-i="f.k">Features</span>
+    <h1 data-i="ft.h">Everything <em>Macy~Sync</em> does</h1>
+    <p class="sub" data-i="ft.p">One small Rust app on both Macs that makes a new Mac feel like your old one.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="frow reveal">
+      <div><span class="caps">SEND · RECEIVE</span><h3 data-i="ft.dir.h">Either way, decided per session</h3><p data-i="ft.dir.p">There is no sender Mac and receiver Mac by setup. Pick the other Mac, then press Send or Receive between the two. The lines in the window always flow from the sender to the receiver, on both screens, and the choice ends with the session.</p></div>
+      <img src="../hover-send.png" width="2560" height="1560" alt="Send or Receive" loading="lazy">
+    </div>
+    <div class="frow reveal">
+      <div><span class="caps">FIND</span><h3 data-i="ft.find.h">The Macs on your account</h3><p data-i="ft.find.p">Find Macs on this account lists every Mac registered in your bus repo as a small laptop with its screen off. Point at one and its screen lights up with its name; click it and it grows into place while the others fade away.</p></div>
+      <img src="../find.png" width="2560" height="1560" alt="Find Macs on this account" loading="lazy">
+    </div>
+    <div class="frow reveal">
+      <div><span class="caps">APPROVE</span><h3 data-i="ft.ask.h">Nothing moves without a yes</h3><p data-i="ft.ask.p">A request waits on the other Mac until its owner approves it. Each Mac has its own key pair; a request carries who asks, which way, and when.</p></div>
+      <img src="../request.png" width="2560" height="1560" alt="Approve a request" loading="lazy">
+    </div>
+    <div class="frow reveal">
+      <div><span class="caps">PICK · MOVE</span><h3 data-i="ft.move.h">Only what you pick, straight across</h3><p data-i="ft.move.p">The sender scans what it can offer: apps with their settings and data, dotfiles, keys, folders, a Brewfile of what Homebrew installed. The receiver ticks what it wants and only that travels, over your network or Tailscale, in an authenticated encrypted stream. A cut connection loses only the item in flight.</p></div>
+      <img src="../sending.png" width="2560" height="1560" alt="Moving" loading="lazy">
+    </div>
+    <div class="frow reveal">
+      <div><span class="caps">AGENT</span><h3 data-i="ft.agent.h">An agent sets it all up</h3><p data-i="ft.agent.p">Files land in place without overwriting anything, preference files are imported, then the new Mac writes AGENTS.md and GOAL.md and starts the agent you chose. Apps tied to an identity, like Tailscale or remote desktop apps, are flagged for a fresh sign in instead of being cloned.</p></div>
+      <img src="../receiving.png" width="2560" height="1560" alt="Receiving and setting up" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>MacySync · MIT · Ege BULUT</span>
+    <span data-i="foot">Not affiliated with Apple. Mac and MacBook are trademarks of Apple Inc.</span>
+  </div>
+</footer>
+
+<script src="../site.js"></script>
+</body>
+</html>
