@@ -93,13 +93,48 @@ pub struct FlowGuide {
     pub into_right: [f32; 2],
 }
 
+static LAYOUT: std::sync::RwLock<Option<&'static Layout>> = std::sync::RwLock::new(None);
+
+/// The layout file the app follows: MACYSYNC_LAYOUT, else this checkout's assets/layout.json when the app was
+/// built from it on this Mac. Elsewhere there is none and the copy built in is used.
+fn layout_file() -> Option<std::path::PathBuf> {
+    std::env::var_os("MACYSYNC_LAYOUT").map(Into::into)
+        .or_else(|| Some(std::path::PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/layout.json"))).filter(|p| p.exists()))
+}
+
+fn read_layout(path: &std::path::Path) -> Result<Layout, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
 pub fn layout() -> &'static Layout {
-    static L: std::sync::OnceLock<Layout> = std::sync::OnceLock::new();
-    L.get_or_init(|| {
-        let custom = std::env::var_os("MACYSYNC_LAYOUT").and_then(|p| std::fs::read_to_string(p).ok());
-        let text = custom.as_deref().unwrap_or(include_str!("../assets/layout.json"));
-        serde_json::from_str(text).unwrap_or_else(|e| panic!("layout.json: {e}"))
+    if let Some(l) = *LAYOUT.read().unwrap() {
+        return l;
+    }
+    *LAYOUT.write().unwrap().get_or_insert_with(|| {
+        let l = match layout_file() {
+            Some(p) => read_layout(&p),
+            None => serde_json::from_str(include_str!("../assets/layout.json")).map_err(|e| e.to_string()),
+        };
+        Box::leak(Box::new(l.unwrap_or_else(|e| panic!("layout.json: {e}"))))
     })
+}
+
+/// Takes `path` again when its time changed since `seen`: a save in the layout editor shows in the running app.
+/// A file caught half written is skipped; the next change brings it in.
+fn reload_layout(path: &std::path::Path, seen: &mut Option<std::time::SystemTime>) -> bool {
+    let Ok(t) = std::fs::metadata(path).and_then(|m| m.modified()) else { return false };
+    if seen.replace(t).is_none_or(|old| old == t) {
+        return false;
+    }
+    match read_layout(path) {
+        // ponytail: each reload leaks the old layout (about 2 KB), fine for an editing session.
+        Ok(l) => {
+            *LAYOUT.write().unwrap() = Some(Box::leak(Box::new(l)));
+            true
+        }
+        Err(_) => false,
+    }
 }
 
 const LID: f32 = 0.655;
@@ -170,6 +205,9 @@ pub struct S {
     picked: Option<(Rect, f32)>,
     /// 1 while the pointer is on Send, -1 on Receive: the lines show which way it would go.
     hover_dir: f32,
+    /// When the layout file was last read, and when it was last looked at.
+    layout_seen: Option<std::time::SystemTime>,
+    layout_checked: f32,
 }
 
 /// Where the dashes are along their curves, as in WavySync: they speed up towards `dir` (1 runs left to
@@ -246,6 +284,8 @@ fn init() -> S {
         glow: Default::default(),
         picked: None,
         hover_dir: 0.0,
+        layout_seen: None,
+        layout_checked: 0.0,
         cfg,
     }
 }
@@ -523,6 +563,12 @@ fn poll(s: &mut S, now: f64, tx: &mut Tx) -> bool {
     while let Ok(job) = s.jobs.1.try_recv() {
         s.land(job);
     }
+    if now - s.layout_checked > 0.4 {
+        s.layout_checked = now;
+        if let Some(p) = layout_file() {
+            reload_layout(&p, &mut s.layout_seen);
+        }
+    }
     if !s.demo && s.bus.is_some() && !s.polling && now - s.polled_at > POLL_S {
         s.polled_at = now;
         s.poll_bus();
@@ -624,49 +670,61 @@ fn hash(n: u32) -> f32 {
     (x & 0xFFFF) as f32 / 65535.0
 }
 
+/// The lines for the current layout, made again when the layout changes.
 fn flow_lines() -> &'static [FlowLine] {
-    static L: std::sync::OnceLock<Vec<FlowLine>> = std::sync::OnceLock::new();
-    L.get_or_init(|| {
-        let poly: Vec<[f32; 2]> = segments().into_iter().flat_map(|s| (1..=16).map(move |i| bezier(s, i as f32 / 16.0))).collect();
-        (0..LINES)
-            .map(|i| {
-                let o = -1.0 + 2.0 * i as f32 / (LINES - 1) as f32;
-                // They fan out over each lobe and squeeze through the bridge.
-                let f = layout().flow;
-                let (yl, yb, yr) = (f.left.y + o * f.left.spread, f.bridge.y + o * f.bridge.spread, f.right.y + o * f.right.spread);
-                let wobble = 4.0 + 6.0 * hash(i as u32 * 7 + 1);
-                let shift = hash(i as u32 * 13 + 5) * std::f32::consts::TAU;
-                let pts: Vec<[f32; 2]> = (0..SAMPLES)
-                    .map(|j| {
-                        let x = -20.0 + 1320.0 * j as f32 / (SAMPLES - 1) as f32;
-                        let sm = |a: f32, b: f32| {
-                            let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
-                            t * t * (3.0 - 2.0 * t)
-                        };
-                        let y = yl + (yb - yl) * sm(f.into_bridge[0], f.into_bridge[1]) + (yr - yb) * sm(f.into_right[0], f.into_right[1]) + wobble * (x / 160.0 + shift).sin();
-                        [x, y]
-                    })
-                    .collect();
-                let depth: Vec<f32> = pts.iter().map(|p| depth(&poly, *p)).collect();
-                let mut inside = Vec::new();
-                let mut from = None;
-                for (j, d) in depth.iter().chain([&-1.0]).enumerate() {
-                    match (from, *d > 6.0) {
-                        (None, true) => from = Some(j),
-                        (Some(a), false) => {
-                            if j - a > 1 {
-                                inside.push(a..j);
-                            }
-                            from = None;
+    static LINES: std::sync::Mutex<Option<(usize, &'static [FlowLine])>> = std::sync::Mutex::new(None);
+    let key = layout() as *const Layout as usize;
+    let mut cache = LINES.lock().unwrap();
+    if let Some((k, lines)) = *cache
+        && k == key
+    {
+        return lines;
+    }
+    let lines: &'static [FlowLine] = Box::leak(make_flow_lines().into_boxed_slice());
+    *cache = Some((key, lines));
+    lines
+}
+
+fn make_flow_lines() -> Vec<FlowLine> {
+    let poly: Vec<[f32; 2]> = segments().into_iter().flat_map(|s| (1..=16).map(move |i| bezier(s, i as f32 / 16.0))).collect();
+    (0..LINES)
+        .map(|i| {
+            let o = -1.0 + 2.0 * i as f32 / (LINES - 1) as f32;
+            // They fan out over each lobe and squeeze through the bridge.
+            let f = layout().flow;
+            let (yl, yb, yr) = (f.left.y + o * f.left.spread, f.bridge.y + o * f.bridge.spread, f.right.y + o * f.right.spread);
+            let wobble = 4.0 + 6.0 * hash(i as u32 * 7 + 1);
+            let shift = hash(i as u32 * 13 + 5) * std::f32::consts::TAU;
+            let pts: Vec<[f32; 2]> = (0..SAMPLES)
+                .map(|j| {
+                    let x = -20.0 + 1320.0 * j as f32 / (SAMPLES - 1) as f32;
+                    let sm = |a: f32, b: f32| {
+                        let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
+                        t * t * (3.0 - 2.0 * t)
+                    };
+                    let y = yl + (yb - yl) * sm(f.into_bridge[0], f.into_bridge[1]) + (yr - yb) * sm(f.into_right[0], f.into_right[1]) + wobble * (x / 160.0 + shift).sin();
+                    [x, y]
+                })
+                .collect();
+            let depth: Vec<f32> = pts.iter().map(|p| depth(&poly, *p)).collect();
+            let mut inside = Vec::new();
+            let mut from = None;
+            for (j, d) in depth.iter().chain([&-1.0]).enumerate() {
+                match (from, *d > 6.0) {
+                    (None, true) => from = Some(j),
+                    (Some(a), false) => {
+                        if j - a > 1 {
+                            inside.push(a..j);
                         }
-                        _ => {}
+                        from = None;
                     }
+                    _ => {}
                 }
-                let (offset, len) = (hash(i as u32 * 61 + 9), 0.03 + 0.024 * hash(i as u32 * 17 + 3));
-                FlowLine { pts, depth, inside, offset, len, speed: if i % 3 == 0 { 2.0 } else { 1.0 } }
-            })
-            .collect()
-    })
+            }
+            let (offset, len) = (hash(i as u32 * 61 + 9), 0.03 + 0.024 * hash(i as u32 * 17 + 3));
+            FlowLine { pts, depth, inside, offset, len, speed: if i % 3 == 0 { 2.0 } else { 1.0 } }
+        })
+        .collect()
 }
 
 fn backdrop(s: &S) -> Vec<El> {
@@ -1242,4 +1300,30 @@ pub fn run(demo_mode: bool) {
     let options = WindowOptions { transparent: true, borderless: true, resizable: false, position: background.then_some((-4000, 100)), ..Default::default() };
     let app = App::new(spec).window_options(options);
     if background { app.open_inactive().run() } else { app.run() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_saved_layout_replaces_the_running_one() {
+        let path = std::env::temp_dir().join(format!("macysync-layout-{}.json", std::process::id()));
+        let mut l: serde_json::Value = serde_json::from_str(include_str!("../assets/layout.json")).unwrap();
+        std::fs::write(&path, l.to_string()).unwrap();
+        let mut seen = None;
+        assert!(!reload_layout(&path, &mut seen), "the first look only notes the time");
+        let lines = flow_lines().as_ptr();
+        l["elements"]["title"]["x"] = 333.0.into();
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::fs::write(&path, l.to_string()).unwrap();
+        assert!(reload_layout(&path, &mut seen));
+        assert_eq!(layout().elements.title.x, 333.0);
+        assert_ne!(flow_lines().as_ptr(), lines, "the lines follow the new layout");
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::fs::write(&path, "{ half written").unwrap();
+        assert!(!reload_layout(&path, &mut seen), "a broken file keeps the last good layout");
+        assert_eq!(layout().elements.title.x, 333.0);
+        let _ = std::fs::remove_file(path);
+    }
 }

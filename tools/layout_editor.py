@@ -3,7 +3,9 @@ the real app with an unsaved layout for the preview.
 
 usage: python3 -I tools/layout_editor.py [port]      then open http://127.0.0.1:8793/
 
-Listens on 127.0.0.1 only. A save keeps the previous layout in tools/layout-backups/.
+Listens on 127.0.0.1 only. A save keeps the previous layout in tools/layout-backups/. A MacySync built from
+this folder reads assets/layout.json while it runs, so an open window redraws with each save; "Open app"
+starts one in demo mode (made-up Macs, nothing sent anywhere).
 """
 
 import json
@@ -19,6 +21,7 @@ LAYOUT = ROOT / "assets" / "layout.json"
 BIN = ROOT / "target" / "debug" / "macysync"
 SCENES = {"connect", "device", "models", "request", "sending", "receiving", "tr"}
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8793
+app = None  # the demo window "Open app" started
 
 
 def valid(layout: object) -> bool:
@@ -69,6 +72,15 @@ class Handler(BaseHTTPRequestHandler):
             (backups / f"layout-{time.strftime('%Y%m%d-%H%M%S')}.json").write_bytes(LAYOUT.read_bytes())
             LAYOUT.write_text(json.dumps(layout, indent=2) + "\n")
             return self.send(200, json.dumps({"ok": True, "path": str(LAYOUT)}).encode(), "application/json")
+        if self.path == "/launch":
+            global app
+            if app is not None and app.poll() is None:
+                return self.send(200, b'{"ok":true,"running":true}', "application/json")
+            b = subprocess.run(["cargo", "build", "-j", "3"], cwd=ROOT, capture_output=True)
+            if b.returncode != 0:
+                return self.send(500, json.dumps({"error": b.stderr.decode(errors="replace")[-600:]}).encode(), "application/json")
+            app = subprocess.Popen([str(BIN), "--demo"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return self.send(200, b'{"ok":true}', "application/json")
         if self.path == "/render":
             layout, scene = body.get("layout"), body.get("scene", "connect")
             if not valid(layout) or scene not in SCENES:

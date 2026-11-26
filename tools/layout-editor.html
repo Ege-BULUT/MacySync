@@ -75,6 +75,7 @@ svg text { font-family: Inter, -apple-system, sans-serif; }
       <option value="receiving">receiving</option><option value="request">request</option><option value="models">models</option>
     </select>
     <button id="bPreview" data-t="preview" data-tip="tipPreview">Render preview</button>
+    <button id="bApp" data-t="openApp" data-tip="tipApp">Open app</button>
     <div class="sep"></div>
     <button id="bExport" data-t="export" data-tip="tipExport">Export JSON</button>
     <button id="bSave" class="primary" data-t="save" data-tip="tipSave">Save</button>
@@ -135,7 +136,9 @@ const T = {
     preview: "Render preview", export: "Export JSON", save: "Save", selection: "Selection", groups: "Groups", flowTitle: "Background lines", view: "View",
     reference: "Reference", none: "none", lastPreview: "last preview", opacity: "Opacity", showLines: "Lines", showDialog: "Dialog", keys: "Keys",
     howTitle: "How it is applied",
-    howText: "Save writes assets/layout.json, the file the app reads its layout from. Tell Claude \"layout saved\": it rebuilds and checks. Export JSON gives the same file to paste when the page runs without its server.",
+    howText: "Save writes assets/layout.json, the file the app reads its layout from. An open MacySync window (Open app) redraws with it within a second; a release build takes the same file in when it is built. Export JSON gives the same file when the page runs without its server.",
+    openApp: "Open app", launching: "Opening MacySync (demo: made-up Macs, nothing sent)…", launched: "MacySync is open: every Save shows in it.", running: "MacySync is already open: every Save shows in it.", launchFail: "Couldn't open the app: ",
+    tipApp: "<b>Open app</b>: starts MacySync in demo mode (made-up Macs, nothing sent). It follows assets/layout.json, so each Save redraws it.",
     nothing: "Nothing selected. Click a shape, drag a box around several, or double-click the outline to edit its points.",
     pointsOf: "Points of", pointsHint: "Drag points, double-click the line to add one, Delete removes the selected ones, Esc finishes.",
     selectedN: "selected", inGroup: "in group", members: "members", select: "Select", modePoints: "POINT EDIT",
@@ -143,7 +146,7 @@ const T = {
     left_panel: "Left panel (tabs + card)", right_panel: "Right card", actions: "Send / Receive buttons", controls: "Window buttons", dialog: "Request dialog",
     "band:left": "Lines over the left lobe", "band:bridge": "Lines through the bridge", "band:right": "Lines over the right lobe",
     y: "centre y", spread: "spread", intoBridge: "bend into bridge (x)", intoRight: "bend into right (x)",
-    saved: "Saved to assets/layout.json. Tell Claude \"layout saved\" to rebuild the app with it.", saveFail: "Save failed: ",
+    saved: "Saved to assets/layout.json. An open MacySync window redraws with it now.", saveFail: "Save failed: ",
     noServer: "No server: start it with python3 -I tools/layout_editor.py, or use Export JSON.", rendering: "Rendering the real app…",
     rendered: "Preview rendered: it is the reference image now.", renderFail: "Render failed: ", exported: "layout.json downloaded.",
     tipUndo: "<b>Undo</b> (⌘Z): step back one change.", tipRedo: "<b>Redo</b> (⇧⌘Z): step forward again.",
@@ -163,7 +166,9 @@ const T = {
     preview: "Önizleme üret", export: "JSON indir", save: "Kaydet", selection: "Seçim", groups: "Gruplar", flowTitle: "Arka plan çizgileri", view: "Görünüm",
     reference: "Referans", none: "yok", lastPreview: "son önizleme", opacity: "Saydamlık", showLines: "Çizgiler", showDialog: "Diyalog", keys: "Kısayollar",
     howTitle: "Nasıl uygulanır",
-    howText: "Kaydet, uygulamanın düzeni okuduğu assets/layout.json dosyasını yazar. Claude'a \"layout kaydedildi\" de: uygulamayı yeniden derleyip kontrol eder. Sayfa sunucusuz açıldıysa JSON indir aynı dosyayı verir.",
+    howText: "Kaydet, uygulamanın düzeni okuduğu assets/layout.json dosyasını yazar. Açık bir MacySync penceresi (Uygulamayı aç) bir saniye içinde yeniden çizilir; release derlemesi de aynı dosyayı derlenirken içine alır. Sayfa sunucusuz açıldıysa JSON indir aynı dosyayı verir.",
+    openApp: "Uygulamayı aç", launching: "MacySync açılıyor (demo: uydurma Mac'ler, hiçbir şey gönderilmez)…", launched: "MacySync açık: her Kaydet onda görünür.", running: "MacySync zaten açık: her Kaydet onda görünür.", launchFail: "Uygulama açılamadı: ",
+    tipApp: "<b>Uygulamayı aç</b>: MacySync'i demo modunda başlatır (uydurma Mac'ler, hiçbir şey gönderilmez). assets/layout.json'u izler, her Kaydet'te yeniden çizilir.",
     nothing: "Seçili bir şey yok. Bir şekle tıkla, birkaçının çevresine kutu çiz ya da noktalarını düzenlemek için dış hatta çift tıkla.",
     pointsOf: "Noktalar:", pointsHint: "Noktaları sürükle, eklemek için çizgiye çift tıkla, seçilenleri Delete siler, Esc bitirir.",
     selectedN: "seçili", inGroup: "grupta", members: "üye", select: "Seç", modePoints: "NOKTA DÜZENLEME",
@@ -171,7 +176,7 @@ const T = {
     left_panel: "Sol panel (sekmeler + kart)", right_panel: "Sağ kart", actions: "Gönder / Al düğmeleri", controls: "Pencere düğmeleri", dialog: "İstek diyaloğu",
     "band:left": "Sol lobdaki çizgiler", "band:bridge": "Köprüden geçen çizgiler", "band:right": "Sağ lobdaki çizgiler",
     y: "merkez y", spread: "yayılım", intoBridge: "köprüye kıvrılma (x)", intoRight: "sağa kıvrılma (x)",
-    saved: "assets/layout.json kaydedildi. Uygulamayı bununla derlemesi için Claude'a \"layout kaydedildi\" de.", saveFail: "Kaydedilemedi: ",
+    saved: "assets/layout.json kaydedildi. Açık MacySync penceresi şimdi yeniden çiziliyor.", saveFail: "Kaydedilemedi: ",
     noServer: "Sunucu yok: python3 -I tools/layout_editor.py ile başlat ya da JSON indir'i kullan.", rendering: "Gerçek uygulama çiziliyor…",
     rendered: "Önizleme hazır: artık referans görüntü o.", renderFail: "Çizilemedi: ", exported: "layout.json indirildi.",
     tipUndo: "<b>Geri al</b> (⌘Z): bir değişiklik geri.", tipRedo: "<b>Yinele</b> (⇧⌘Z): yeniden ileri.",
@@ -665,6 +670,15 @@ async function preview() {
     document.getElementById("refSel").value = "preview"; setRef(); toast(t("rendered"));
   } catch (e) { toast(location.protocol === "file:" ? t("noServer") : t("renderFail") + e.message, true); }
 }
+async function openApp() {
+  toast(t("launching"));
+  try {
+    const r = await fetch("/launch", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || r.status);
+    toast(t(j.running ? "running" : "launched"));
+  } catch (e) { toast(location.protocol === "file:" ? t("noServer") : t("launchFail") + e.message, true); }
+}
 function setRef() {
   const v = document.getElementById("refSel").value, img = document.getElementById("ref");
   const src = v === "preview" ? previewUrl : v ? "/shots/" + v : "";
@@ -681,6 +695,7 @@ document.getElementById("bSnap").onclick = () => { snap = !snap; document.getEle
 document.getElementById("bSave").onclick = save;
 document.getElementById("bExport").onclick = exportJson;
 document.getElementById("bPreview").onclick = preview;
+document.getElementById("bApp").onclick = openApp;
 document.getElementById("refSel").onchange = setRef;
 document.getElementById("refOp").oninput = setRef;
 document.getElementById("showLines").onchange = render;
