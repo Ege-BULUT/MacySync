@@ -157,8 +157,7 @@ fn tar_item(item: &Node, home: &Path, skip_rebuildable: bool) -> io::Result<std:
     if !item.command.is_empty() {
         let dir = std::env::temp_dir().join(format!("macysync-gen-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("macysync-generated"))?;
-        let o = Command::new("/bin/zsh").args(["-lc", &item.command]).stderr(Stdio::null()).output()?;
-        std::fs::write(dir.join("macysync-generated").join(&item.file), o.stdout)?;
+        std::fs::write(dir.join("macysync-generated").join(&item.file), run_for(&item.command, Duration::from_secs(90)))?;
         c.arg("-C").arg(&dir).arg(format!("macysync-generated/{}", item.file));
     } else {
         c.args(["-C", "/"]);
@@ -169,6 +168,26 @@ fn tar_item(item: &Node, home: &Path, skip_rebuildable: bool) -> io::Result<std:
         c.args(rel);
     }
     c.stdout(Stdio::piped()).stderr(Stdio::null()).spawn()
+}
+
+/// A command's output, or what it wrote before `limit`: a command that waits on a dialog nobody answers (a
+/// keychain read) must not hold the whole transfer.
+fn run_for(command: &str, limit: Duration) -> Vec<u8> {
+    let out = std::env::temp_dir().join(format!("macysync-run-{}-{}", std::process::id(), seal::random::<4>().iter().map(|b| format!("{b:02x}")).collect::<String>()));
+    let Ok(file) = std::fs::File::create(&out) else { return vec![] };
+    let Ok(mut child) = Command::new("/bin/zsh").args(["-lc", command]).stdout(file).stderr(Stdio::null()).spawn() else { return vec![] };
+    let start = Instant::now();
+    while child.try_wait().ok().flatten().is_none() {
+        if start.elapsed() > limit {
+            let _ = child.kill();
+            let _ = child.wait();
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    let bytes = std::fs::read(&out).unwrap_or_default();
+    let _ = std::fs::remove_file(&out);
+    bytes
 }
 
 pub fn expand(home: &Path, p: &str) -> PathBuf {

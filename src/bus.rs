@@ -66,9 +66,21 @@ impl Bus {
     /// A file's bytes and sha.
     pub fn get(&self, path: &str) -> Result<Option<(Vec<u8>, String)>, String> {
         let Some(v) = self.get_value(path)? else { return Ok(None) };
+        let sha = v["sha"].as_str().unwrap_or_default().to_string();
+        // Over 1 MB the contents API leaves `content` empty; the raw media type still gives the bytes.
+        if v["encoding"].as_str() == Some("none") && v["size"].as_u64().unwrap_or(0) > 0 {
+            let url = format!("{API}/repos/{}/contents/{path}", self.repo);
+            let res = agent().get(&url).header("Authorization", &format!("Bearer {}", self.token)).header("User-Agent", "MacySync")
+                .header("Accept", "application/vnd.github.raw+json").call().map_err(|e| e.to_string())?;
+            if res.status().as_u16() >= 300 {
+                return Err(format!("GitHub {} on {path}", res.status().as_u16()));
+            }
+            let bytes = res.into_body().with_config().limit(200 << 20).read_to_vec().map_err(|e| e.to_string())?;
+            return Ok(Some((bytes, sha)));
+        }
         let b64: String = v["content"].as_str().unwrap_or_default().chars().filter(|c| !c.is_whitespace()).collect();
         let bytes = B64.decode(b64).map_err(|e| format!("{path}: {e}"))?;
-        Ok(Some((bytes, v["sha"].as_str().unwrap_or_default().into())))
+        Ok(Some((bytes, sha)))
     }
 
     pub fn get_json<T: DeserializeOwned>(&self, path: &str) -> Result<Option<(T, String)>, String> {
@@ -85,29 +97,62 @@ impl Bus {
 
     /// Creates or replaces a file. `sha` is the version being replaced: None for a new file, or to look it up.
     pub fn put(&self, path: &str, bytes: &[u8], sha: Option<&str>, msg: &str) -> Result<String, String> {
-        let sha = match sha {
-            Some(s) => Some(s.to_string()),
-            None => self.get(path)?.map(|(_, s)| s),
-        };
-        let mut body = json!({ "message": msg, "content": B64.encode(bytes) });
-        if let Some(s) = sha {
-            body["sha"] = json!(s);
+        // Two Macs committing to the branch at the same moment get a 409 for the slower one: try again.
+        let mut tries = 0;
+        loop {
+            let sha = match sha {
+                Some(s) => Some(s.to_string()),
+                None => self.get(path)?.map(|(_, s)| s),
+            };
+            let mut body = json!({ "message": msg, "content": B64.encode(bytes) });
+            if let Some(s) = sha {
+                body["sha"] = json!(s);
+            }
+            let url = format!("{API}/repos/{}/contents/{path}", self.repo);
+            let res = agent().put(&url).header("Authorization", &format!("Bearer {}", self.token)).header("User-Agent", "MacySync").send_json(body).map_err(|e| e.to_string())?;
+            let status = res.status().as_u16();
+            let v: Value = res.into_body().read_json().unwrap_or_default();
+            self.cache.lock().unwrap().remove(path);
+            if (status == 409 || status >= 500) && tries < 4 {
+                tries += 1;
+                std::thread::sleep(Duration::from_millis(700 * tries));
+                continue;
+            }
+            if status >= 300 {
+                return Err(format!("GitHub {status} writing {path}: {}", v["message"].as_str().unwrap_or("error")));
+            }
+            return Ok(v["content"]["sha"].as_str().unwrap_or_default().into());
         }
-        let url = format!("{API}/repos/{}/contents/{path}", self.repo);
-        let res = agent().put(&url).header("Authorization", &format!("Bearer {}", self.token)).header("User-Agent", "MacySync").send_json(body).map_err(|e| e.to_string())?;
-        let status = res.status().as_u16();
-        let v: Value = res.into_body().read_json().unwrap_or_default();
-        if status >= 300 {
-            return Err(format!("GitHub {status} writing {path}: {}", v["message"].as_str().unwrap_or("error")));
-        }
-        self.cache.lock().unwrap().remove(path);
-        Ok(v["content"]["sha"].as_str().unwrap_or_default().into())
     }
 
     pub fn put_json<T: Serialize>(&self, path: &str, t: &T, sha: Option<&str>, msg: &str) -> Result<String, String> {
         self.put(path, &serde_json::to_vec_pretty(t).unwrap(), sha, msg)
     }
 }
+
+pub fn github_login(token: &str) -> Result<String, String> {
+    let res = ureq::get("https://api.github.com/user").header("Authorization", &format!("Bearer {token}")).header("User-Agent", "MacySync").call().map_err(|e| format!("GitHub: {e}"))?;
+    let v: serde_json::Value = res.into_body().read_json().map_err(|e| e.to_string())?;
+    v["login"].as_str().map(String::from).ok_or("GitHub didn't say who this token belongs to".into())
+}
+
+/// The bus repo, made private on first use when the token's account owns the name.
+pub fn ensure_repo(token: &str, repo: &str) -> Result<(), String> {
+    let agent: ureq::Agent = ureq::Agent::config_builder().http_status_as_error(false).build().into();
+    let auth = format!("Bearer {token}");
+    let res = agent.get(&format!("https://api.github.com/repos/{repo}")).header("Authorization", &auth).header("User-Agent", "MacySync").call().map_err(|e| e.to_string())?;
+    match res.status().as_u16() {
+        200 => Ok(()),
+        404 => {
+            let name = repo.rsplit('/').next().unwrap_or(repo);
+            let body = serde_json::json!({ "name": name, "private": true, "auto_init": true, "description": "MacySync's device and transfer bus (written by the app)." });
+            let r = agent.post("https://api.github.com/user/repos").header("Authorization", &auth).header("User-Agent", "MacySync").send_json(body).map_err(|e| e.to_string())?;
+            if r.status().as_u16() < 300 { Ok(()) } else { Err(format!("Couldn't create {repo}: GitHub {}", r.status().as_u16())) }
+        }
+        s => Err(format!("GitHub {s} for {repo}")),
+    }
+}
+
 
 // Documents ------------------------------------------------------------------------------------------
 
@@ -135,6 +180,10 @@ impl Device {
 
 pub fn b64(b: &[u8]) -> String {
     B64.encode(b)
+}
+
+pub fn unb64(s: &str) -> Option<Vec<u8>> {
+    B64.decode(s.trim()).ok()
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]

@@ -81,6 +81,17 @@ pub struct Offer {
     pub tree: Node,
 }
 
+/// (app, keychain service, account) of the key a Chromium browser encrypts saved passwords and cookies with.
+pub const BROWSER_KEYS: [(&str, &str, &str); 7] = [
+    ("Helium", "Helium Storage Key", "Helium"),
+    ("Chromium", "Chromium Safe Storage", "Chromium"),
+    ("Google Chrome", "Chrome Safe Storage", "Chrome"),
+    ("Brave Browser", "Brave Safe Storage", "Brave"),
+    ("Microsoft Edge", "Microsoft Edge Safe Storage", "Microsoft Edge"),
+    ("Vivaldi", "Vivaldi Safe Storage", "Vivaldi"),
+    ("Arc", "Arc Safe Storage", "Arc"),
+];
+
 /// Folders rebuilt from source on the new Mac: skipped inside every copied folder when asked to.
 pub const REBUILDABLE: [&str; 8] = ["node_modules", "target", ".venv", "venv", "__pycache__", ".gradle", "DerivedData", ".next"];
 
@@ -110,8 +121,8 @@ const KNOWN: &[Known] = &[
     Known { app: "Opensidian", extra: &[("Vault list", &["~/.opensidian.json"])], note: "~/.opensidian.json lists the vault folders by absolute path. The vault folders themselves travel with Documents or wherever they live; rewrite the paths if the user name changed, make sure each vault folder exists, then open the app and check the last vault opens.", identity: false },
     Known { app: "Obsidian", extra: &[], note: "~/Library/Application Support/obsidian/obsidian.json lists the vaults by absolute path; rewrite them if the user name changed and check each vault folder arrived.", identity: false },
     Known { app: "Visual Studio Code", extra: &[("Extensions", &["~/.vscode/extensions"])], note: "Settings, keybindings and snippets are in ~/Library/Application Support/Code/User; extensions copy as is. Run `code --list-extensions` to check they load.", identity: false },
-    Known { app: "Wave", extra: &[("Config", &["~/.config/waveterm"])], note: "Wave keeps settings in ~/.config/waveterm and its data in ~/Library/Application Support/waveterm.", identity: false },
-    Known { app: "Helium", extra: &[], note: "Saved passwords and cookies are encrypted with the 'Helium Safe Storage' key in the login keychain: put that key in place (see Secrets) before the first start, or the browser makes a new key and the old passwords can't be read.", identity: false },
+    Known { app: "Wave", extra: &[("Config", &["~/.config/waveterm"]), ("Workspaces and layouts", &["~/Library/Application Support/waveterm"])], note: "Wave keeps settings in ~/.config/waveterm, its workspaces, tabs and layouts in ~/Library/Application Support/waveterm (a SQLite database, copied whole) and the window's web storage in ~/Library/Application Support/Wave. Quit Wave before placing them. Widget commands that name the old home folder need the new one.", identity: false },
+    Known { app: "Helium", extra: &[], note: "Saved passwords and cookies are encrypted with the 'Helium Storage Key' item of the login keychain: put that key in place (see Secrets) before the first start, or the browser makes a new key and the old passwords can't be read.", identity: false },
     Known { app: "Chromium", extra: &[], note: "Saved passwords and cookies need the 'Chromium Safe Storage' keychain key (see Secrets) in place before the first start.", identity: false },
     Known { app: "Tailscale", extra: &[], note: "Sign in again on the new Mac; a copy would carry this Mac's node identity.", identity: true },
     Known { app: "RustDesk", extra: &[("Config", &["~/Library/Preferences/com.carriez.RustDesk"])], note: "Install fresh and set a new password; a copy would clone this Mac's RustDesk ID.", identity: true },
@@ -236,10 +247,15 @@ pub fn scan(home: &Path, app_dirs: &[PathBuf], skip_rebuildable: bool) -> Node {
         secret("secrets/keychain", "Login keychain (as a second keychain)", &["~/Library/Keychains/login.keychain-db"],
             "Do not replace the new Mac's login keychain. Add the copy as a second keychain: `security create-keychain` is not needed, copy it to ~/Library/Keychains/old-mac.keychain-db and run `security list-keychains -d user -s login.keychain-db old-mac.keychain-db`; it opens with the old Mac's login password. The person can then move items in Keychain Access."),
     ];
-    for b in ["Helium", "Chromium", "Google Chrome", "Brave Browser", "Microsoft Edge", "Vivaldi", "Arc"] {
+    // (app, keychain service, account) of the key each Chromium browser encrypts passwords and cookies with.
+    for (b, svc, acct) in BROWSER_KEYS {
         if app_dirs.iter().any(|d| d.join(format!("{b}.app")).exists()) {
-            secrets.push(made(&format!("secrets/{}-key", slug(b)), &format!("{b} Safe Storage key"), &format!("security find-generic-password -w -s '{b} Safe Storage'"), &format!("{}-safe-storage.txt", slug(b)),
-                &format!("Before the first start of {b}, run `security add-generic-password -U -s '{b} Safe Storage' -a '{b}' -w \"$(cat <this file>)\"`, so its saved passwords and cookies open. macOS asks the old Mac's user once to read it.")).with(|n| n.secret = true));
+            secrets.push(made(&format!("secrets/{}-key", slug(b)), &format!("{b} password key"), &format!("security find-generic-password -w -s '{svc}' -a '{acct}'"), &format!("{}-safe-storage.txt", slug(b)),
+                &format!("Before the first start of {b}, run `security add-generic-password -U -s '{svc}' -a '{acct}' -w \"$(cat <this file>)\"`, so its saved passwords and cookies open. If this file is empty (nobody was at the old Mac to allow reading the key), the same item is in the old login keychain: add that keychain to the search list (see Secrets) and unlock it once with the old Mac's password.")).with(|n| {
+                n.secret = true;
+                // Reading the key asks the old Mac's user in a dialog; only taken when ticked on purpose.
+                n.off = true;
+            }));
         }
     }
     for p in ["~/.ssh", "~/.gnupg", "~/.config/gh", "~/.npmrc", "~/.netrc", "~/.aws", "~/.docker", "~/.kube"] {
@@ -254,7 +270,15 @@ pub fn scan(home: &Path, app_dirs: &[PathBuf], skip_rebuildable: bool) -> Node {
         ("OpenCommunicate", &["~/.opencommunicate", "~/.opencommunicate-apps"][..], "Each folder is one device identity; moving it moves that identity, so don't run both Macs as the same one.")];
     let mut ai = Vec::new();
     for (name, paths, note) in ai_paths {
-        let paths: Vec<String> = paths.iter().filter(|p| exists(p)).map(|p| p.to_string()).collect();
+        let mut paths: Vec<String> = paths.iter().filter(|p| exists(p)).map(|p| p.to_string()).collect();
+        // The native installer's `claude` is a link to one version under ~/.local/share/claude: take both, not all versions.
+        if name == "Claude Code" {
+            let link = home.join(".local/bin/claude");
+            if let Ok(target) = std::fs::read_link(&link) {
+                paths.push(tilde(home, &link));
+                paths.push(tilde(home, &link.parent().unwrap().join(target)));
+            }
+        }
         claimed.extend(paths.iter().cloned());
         ai.push(Node::leaf(&format!("ai/{}", slug(name)), name, paths).with(|n| {
             n.note = note.into();
