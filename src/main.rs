@@ -7,7 +7,7 @@ mod setup;
 mod ui;
 mod wire;
 
-const HELP: &str = "MacySync: move a Mac to a new Mac. The old one offers, the new one picks, an agent sets it up.
+const HELP: &str = "MacySync: move a Mac to a new Mac. Any Mac sends to or takes from another; the sender offers, the receiver picks, an agent sets it up.
 
   macysync              open the window
   macysync --demo       the window on made-up Macs; touches nothing
