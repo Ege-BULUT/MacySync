@@ -83,12 +83,31 @@ pub fn place(staging: &Path, dir: &Path, old_home: &str, home: &Path, items: &[N
             }
             let _ = std::fs::create_dir_all(dst.parent().unwrap());
             match std::fs::rename(&src, &dst) {
-                Ok(()) => p.to.push(dst),
+                Ok(()) => {
+                    relink(&dst, old_home, home);
+                    p.to.push(dst);
+                }
                 Err(e) => p.problems.push(format!("{}: {e}", dst.display())),
             }
         }
         p
     }).collect()
+}
+
+/// Points links that named the old home folder (`~/.local/bin/claude -> /Users/old/.local/share/...`) at the
+/// same place under this one, at `path` and anywhere under it.
+fn relink(path: &Path, old_home: &Path, home: &Path) {
+    let Ok(meta) = std::fs::symlink_metadata(path) else { return };
+    if meta.file_type().is_symlink() {
+        if let Some(rest) = std::fs::read_link(path).ok().and_then(|t| t.strip_prefix(old_home).ok().map(Path::to_path_buf)) {
+            let _ = std::fs::remove_file(path);
+            let _ = std::os::unix::fs::symlink(home.join(rest), path);
+        }
+    } else if meta.is_dir() {
+        for e in std::fs::read_dir(path).into_iter().flatten().flatten() {
+            relink(&e.path(), old_home, home);
+        }
+    }
 }
 
 const AGENTS_MD: &str = "# You are finishing a Mac migration
@@ -177,6 +196,10 @@ mod tests {
         put("apps__k__config/Users/olduser/.config/karabiner/karabiner.json", "new");
         put("tools__brew/macysync-generated/Brewfile", "brew \"jq\"");
         put("secrets__keychain/Users/olduser/Library/Keychains/login.keychain-db", "old keys");
+        put("ai__c/Users/olduser/.local/share/c/1.0", "binary");
+        std::fs::create_dir_all(staging.join("ai__c/Users/olduser/.local/bin")).unwrap();
+        std::os::unix::fs::symlink("/Users/olduser/.local/share/c/1.0", staging.join("ai__c/Users/olduser/.local/bin/c")).unwrap();
+        std::os::unix::fs::symlink("../share/c/1.0", staging.join("ai__c/Users/olduser/.local/bin/rel")).unwrap();
         std::fs::create_dir_all(home.join(".config/karabiner")).unwrap();
         std::fs::write(home.join(".config/karabiner/karabiner.json"), "mine").unwrap();
         std::fs::create_dir_all(home.join("Library/Keychains")).unwrap();
@@ -185,6 +208,7 @@ mod tests {
             Node { id: "apps/k/config".into(), name: "Karabiner config".into(), paths: vec!["~/.config/karabiner".into()], note: "approve the driver".into(), ..Node::default() },
             Node { id: "tools/brew".into(), name: "Brewfile".into(), command: "x".into(), file: "Brewfile".into(), ..Node::default() },
             Node { id: "secrets/keychain".into(), name: "Keychain".into(), paths: vec!["~/Library/Keychains/login.keychain-db".into()], secret: true, ..Node::default() },
+            Node { id: "ai/c".into(), name: "C".into(), paths: vec!["~/.local/bin".into(), "~/.local/share/c/1.0".into()], ..Node::default() },
         ];
         let placed = place(&staging, &dir, old_home, &home, &items);
         assert!(placed.iter().all(|p| p.problems.is_empty()), "{placed:?}");
@@ -193,6 +217,9 @@ mod tests {
         assert_eq!(std::fs::read_to_string(home.join("Library/Keychains/login.keychain-db")).unwrap(), "this mac", "never over this Mac's keychain");
         assert_eq!(std::fs::read_to_string(home.join("Library/Keychains/old-mac.keychain-db")).unwrap(), "old keys");
         assert!(dir.join("generated/Brewfile").exists());
+        assert_eq!(std::fs::read_link(home.join(".local/bin/c")).unwrap(), home.join(".local/share/c/1.0"), "a link into the old home follows to the new one");
+        assert_eq!(std::fs::read_to_string(home.join(".local/bin/c")).unwrap(), "binary");
+        assert_eq!(std::fs::read_link(home.join(".local/bin/rel")).unwrap(), Path::new("../share/c/1.0"), "a relative link stays as it was");
 
         let goal = write_brief(&dir, "Old Mac", old_home, &home, &placed).unwrap();
         assert!(goal.contains("`/Users/olduser`"), "the path rewrite is spelled out");
