@@ -49,6 +49,8 @@ pub struct Live {
     pub items: usize,
     pub current: String,
     pub network: String,
+    /// When the bytes started to move (unix seconds), for the average speed.
+    pub started: u64,
     pub note: String,
     pub done: bool,
     pub failed: bool,
@@ -102,6 +104,25 @@ pub fn write_receiver(b: &Bus, transfer: &str, doc: &ReceiverDoc) -> Result<(), 
     let mut d = doc.clone();
     d.updated = bus::now();
     b.put_json(&format!("{transfer}/receiver.json"), &d, None, &format!("receiver {}", d.state)).map(|_| ())
+}
+
+/// Puts this side's progress on the bus: session.json for the sender, receiver.json for the receiver.
+pub fn report(b: &Bus, transfer: &str, sender: bool, l: &Live) -> Result<(), String> {
+    if !sender {
+        let d = ReceiverDoc { state: l.state.clone(), bytes: l.bytes, items_done: l.items_done as u64, items: l.items as u64, note: l.note.clone(), updated: 0 };
+        return write_receiver(b, transfer, &d);
+    }
+    let secs = bus::now().saturating_sub(l.started).max(1);
+    update_session(b, transfer, |s| {
+        s.state = l.state.clone();
+        s.bytes = l.bytes;
+        s.total = l.total;
+        s.items = l.items as u64;
+        s.items_done = l.items_done as u64;
+        s.avg_bytes_per_s = l.bytes / secs;
+        s.network = l.network.clone();
+        s.note = l.note.clone();
+    })
 }
 
 // Ticks ---------------------------------------------------------------------------------------------------
@@ -179,6 +200,7 @@ fn serving(b: &Bus, transfer: &str, receiver: &Device, offer: &Offer, picks: &Pi
     {
         let mut l = live.lock().unwrap();
         l.state = "sending".into();
+        l.started = bus::now();
         l.total = items.iter().map(|i| i.size).sum();
         l.items = items.len();
     }
@@ -215,6 +237,7 @@ fn receiving(ep: &Endpoint, offer: &Offer, picks: &Picks, dir: &Path, from: &str
     {
         let mut l = live.lock().unwrap();
         l.state = "receiving".into();
+        l.started = bus::now();
         l.total = items.iter().map(|i| i.size).sum();
         l.items = items.len();
         l.dir = Some(dir.to_path_buf());

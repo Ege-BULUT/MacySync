@@ -123,7 +123,6 @@ fn sender(c: &Ctx, r: &Request, to: &Device, only: &[String]) -> Result<(), Stri
     let live: session::Shared = Arc::new(Mutex::new(Live::default()));
     let (b, t2, to2, l2) = (c.bus.clone(), t.clone(), to.clone(), live.clone());
     let worker = std::thread::spawn(move || session::serve(&b, &t2, &to2, &offer, &picks, &home, l2));
-    let start = Instant::now();
     let mut last_write = Instant::now() - Duration::from_secs(60);
     loop {
         let l = live.lock().unwrap().clone();
@@ -131,17 +130,7 @@ fn sender(c: &Ctx, r: &Request, to: &Device, only: &[String]) -> Result<(), Stri
         println!("{} {} / {}  {}/{} items  {}  {}", l.state, gb(l.bytes), gb(l.total), l.items_done, l.items, l.network, l.current);
         if finished || last_write.elapsed() > Duration::from_secs(10) {
             last_write = Instant::now();
-            let secs = start.elapsed().as_secs().max(1);
-            let _ = session::update_session(&c.bus, &t, |s| {
-                s.state = l.state.clone();
-                s.bytes = l.bytes;
-                s.total = l.total;
-                s.items = l.items as u64;
-                s.items_done = l.items_done as u64;
-                s.avg_bytes_per_s = l.bytes / secs;
-                s.network = l.network.clone();
-                s.note = l.note.clone();
-            });
+            let _ = session::report(&c.bus, &t, true, &l);
         }
         if finished {
             break;
@@ -159,8 +148,7 @@ fn receiver(c: &Ctx, r: &Request, from: &Device, only: &[String]) -> Result<(), 
     println!("taking {} of {} offered items, {}", picks.ids.len(), offer.tree.leaves().len(), gb(session::ticked_size(&offer.tree, &ticks)));
     let key = from.key_bytes().ok_or("the other Mac has no key on the bus")?;
     session::put_sealed(&c.bus, &format!("{t}/picks.sealed"), &key, &picks, "picks")?;
-    let mut doc = ReceiverDoc { state: "waiting".into(), items: picks.ids.len() as u64, ..ReceiverDoc::default() };
-    session::write_receiver(&c.bus, &t, &doc)?;
+    session::write_receiver(&c.bus, &t, &ReceiverDoc { state: "waiting".into(), items: picks.ids.len() as u64, ..ReceiverDoc::default() })?;
     let ep: Endpoint = wait(&format!("waiting for {} to start sending", from.name), Duration::from_secs(3600), || session::get_sealed(&c.bus, &format!("{t}/key.sealed"), &c.secret))?;
     let home = me::home_dir();
     let dir: PathBuf = session::local_dir(&home, &t);
@@ -174,8 +162,7 @@ fn receiver(c: &Ctx, r: &Request, from: &Device, only: &[String]) -> Result<(), 
         println!("{} {} / {}  {}/{} items  {}  {}", l.state, gb(l.bytes), gb(l.total), l.items_done, l.items, l.current, l.note);
         if finished || last_write.elapsed() > Duration::from_secs(10) {
             last_write = Instant::now();
-            doc = ReceiverDoc { state: l.state.clone(), bytes: l.bytes, items_done: l.items_done as u64, items: l.items as u64, note: l.note.clone(), updated: 0 };
-            let _ = session::write_receiver(&c.bus, &t, &doc);
+            let _ = session::report(&c.bus, &t, false, &l);
         }
         if finished {
             println!("placed {} items, {} problems; the brief is in {}", l.placed, l.problems, dir.display());

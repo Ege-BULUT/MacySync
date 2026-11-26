@@ -2,8 +2,9 @@
 //! the left, the other Mac on the right, each drawn as its own MacBook. While files move, the electric lines
 //! run from the sender to the receiver on both Macs.
 
-use std::sync::Arc;
+use std::collections::HashSet;
 use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use rune::tok::TextStyle;
@@ -13,6 +14,10 @@ use rune_kit::{Kit, PaletteSeed, TextInput};
 use crate::bus::{self, Answer, Ask, Bus, Device, Request, Session};
 use crate::look::{self, H, W, full};
 use crate::me::{self, Config, Hardware, Look};
+use crate::scan::{self, Node, Offer};
+use crate::session::{self, Live, Picks, ReceiverDoc};
+use crate::setup;
+use crate::wire::Endpoint;
 
 // Metallic blue and metallic grey on a graphite ground. Rune colours are linear light: these are the sRGB hex
 // values in the comments, decoded.
@@ -157,6 +162,11 @@ enum Job {
     Polled(Result<Snapshot, String>),
     Asked(Result<Request, String>),
     Answered(Result<Request, String>),
+    Scanned(Node),
+    /// The offer or the picks went out.
+    Published(Result<(), String>),
+    Moved(Result<(), String>),
+    Reported,
 }
 
 #[derive(Default)]
@@ -164,6 +174,31 @@ struct Snapshot {
     devices: Vec<Device>,
     requests: Vec<(Request, String)>,
     session: Option<Session>,
+    /// The transfer the sealed documents below belong to.
+    transfer: String,
+    offer: Option<Offer>,
+    picks: Option<Picks>,
+    key: Option<Endpoint>,
+}
+
+/// 03 PICK and 04 MOVE, for the accepted transfer.
+#[derive(Default)]
+struct Pick {
+    transfer: String,
+    /// Set once the first look at the bus is in, so an old accepted transfer doesn't switch tabs on launch.
+    seen: bool,
+    /// What's ticked here: this Mac's scan when it sends, the offer when it receives.
+    tree: Option<Node>,
+    ticks: HashSet<String>,
+    open: HashSet<String>,
+    scanning: bool,
+    /// The offer (sender) or the picks (receiver) went out.
+    sent: bool,
+    offer: Option<Offer>,
+    picks: Option<Picks>,
+    live: Option<session::Shared>,
+    reported: f32,
+    reported_state: String,
 }
 
 pub struct S {
@@ -208,6 +243,7 @@ pub struct S {
     /// When the layout file was last read, and when it was last looked at.
     layout_seen: Option<std::time::SystemTime>,
     layout_checked: f32,
+    pick: Pick,
 }
 
 /// Where the dashes are along their curves, as in WavySync: they speed up towards `dir` (1 runs left to
@@ -286,6 +322,7 @@ fn init() -> S {
         hover_dir: 0.0,
         layout_seen: None,
         layout_checked: 0.0,
+        pick: Pick::default(),
         cfg,
     }
 }
@@ -362,6 +399,10 @@ impl S {
         self.polling = true;
         let me = self.cfg.id.clone();
         let transfer = self.active_request().map(|r| r.transfer.clone()).filter(|t| !t.is_empty());
+        let (p, here) = (&self.pick, self.tab >= 3 && transfer.as_ref() == Some(&self.pick.transfer));
+        let want_offer = here && self.sending() == Some(false) && p.offer.is_none();
+        let want_picks = here && self.sending() == Some(true) && p.sent && p.picks.is_none();
+        let want_key = here && self.sending() == Some(false) && p.sent && p.live.is_none();
         self.spawn(String::new(), move || {
             Job::Polled((|| {
                 let mut snap = Snapshot::default();
@@ -377,6 +418,17 @@ impl S {
                 }
                 if let Some(t) = transfer {
                     snap.session = b.get_json::<Session>(&format!("{t}/session.json"))?.map(|s| s.0);
+                    let secret = me::keys().0;
+                    if want_offer {
+                        snap.offer = session::get_sealed(&b, &format!("{t}/offer.sealed"), &secret)?;
+                    }
+                    if want_picks {
+                        snap.picks = session::get_sealed(&b, &format!("{t}/picks.sealed"), &secret)?;
+                    }
+                    if want_key {
+                        snap.key = session::get_sealed(&b, &format!("{t}/key.sealed"), &secret)?;
+                    }
+                    snap.transfer = t;
                 }
                 Ok(snap)
             })())
@@ -429,32 +481,51 @@ impl S {
     }
 
     fn answer(&mut self, yes: bool) {
-        let (Some(b), Some((mut r, sha))) = (self.bus.clone(), self.incoming.take()) else { return };
-        let names: std::collections::HashMap<String, String> = self.devices.iter().map(|d| (d.id.clone(), d.name.clone())).collect();
-        self.spawn(self.t("Answering…", "Yanıtlanıyor…"), move || {
-            Job::Answered((|| {
-                if yes {
-                    let (sender, receiver) = r.sides();
-                    let at = bus::now();
-                    let dir = bus::transfer_dir(at, sender, receiver);
-                    let party = |id: &str| bus::Party { id: id.into(), name: names.get(id).cloned().unwrap_or_default() };
-                    let s = Session {
-                        sender: party(sender),
-                        receiver: party(receiver),
-                        state: "offering".into(),
-                        started: at,
-                        started_utc: bus::utc(at),
-                        updated: at,
-                        ..Session::default()
-                    };
-                    b.put_json(&format!("{dir}/session.json"), &s, None, &format!("transfer {sender} to {receiver}"))?;
-                    r.transfer = dir;
-                }
-                r.answer = if yes { Answer::Accepted } else { Answer::Declined };
-                b.put_json(&r.path(), &r, Some(&sha), &format!("{:?} {}", r.answer, r.path()))?;
-                Ok(r)
-            })())
-        });
+        let (Some(b), Some((r, sha))) = (self.bus.clone(), self.incoming.take()) else { return };
+        let mut names: std::collections::HashMap<String, String> = self.devices.iter().map(|d| (d.id.clone(), d.name.clone())).collect();
+        names.insert(self.cfg.id.clone(), self.cfg.name.clone());
+        self.spawn(self.t("Answering…", "Yanıtlanıyor…"), move || Job::Answered(session::approve(&b, r, &sha, &names, yes)));
+    }
+
+    /// The accepted request whose transfer folder exists.
+    fn transfer(&self) -> Option<&Request> {
+        self.active_request().filter(|r| r.answer == Answer::Accepted && !r.transfer.is_empty())
+    }
+
+    /// Sends the offer (sender) or the picks (receiver) to the other Mac, sealed to its key.
+    fn publish(&mut self) {
+        let (Some(b), Some(r), Some(key), Some(tree)) = (self.bus.clone(), self.transfer().cloned(), self.peer_device().and_then(|d| d.key_bytes()), self.pick.tree.clone()) else { return };
+        let t = r.transfer;
+        self.pick.sent = true;
+        if self.sending() == Some(true) {
+            let offer = session::offer(&me::home_dir(), &tree, &self.pick.ticks);
+            self.pick.offer = Some(offer.clone());
+            self.spawn(self.t("Sending the offer…", "Teklif gönderiliyor…"), move || Job::Published((|| {
+                session::put_sealed(&b, &format!("{t}/offer.sealed"), &key, &offer, "offer")?;
+                session::update_session(&b, &t, |s| s.state = "picking".into())
+            })()));
+        } else {
+            let picks = Picks { ids: tree.leaves().iter().filter(|l| self.pick.ticks.contains(&l.id)).map(|l| l.id.clone()).collect() };
+            let n = picks.ids.len() as u64;
+            self.pick.picks = Some(picks.clone());
+            self.spawn(self.t("Sending your picks…", "Seçimlerin gönderiliyor…"), move || Job::Published((|| {
+                session::put_sealed(&b, &format!("{t}/picks.sealed"), &key, &picks, "picks")?;
+                session::write_receiver(&b, &t, &ReceiverDoc { state: "waiting".into(), items: n, ..ReceiverDoc::default() })
+            })()));
+        }
+    }
+
+    /// Starts sending the picks (sender) or fetching them from `ep` (receiver) on a thread of its own.
+    fn start_moving(&mut self, ep: Option<Endpoint>) {
+        let (Some(b), Some(offer), Some(picks), Some(r), Some(other)) = (self.bus.clone(), self.pick.offer.clone(), self.pick.picks.clone(), self.transfer().cloned(), self.peer_device().cloned()) else { return };
+        let live: session::Shared = Default::default();
+        self.pick.live = Some(live.clone());
+        self.tab = 4;
+        let home = me::home_dir();
+        self.spawn(String::new(), move || Job::Moved(match ep {
+            None => session::serve(&b, &r.transfer, &other, &offer, &picks, &home, live),
+            Some(ep) => session::receive(&ep, &offer, &picks, &session::local_dir(&home, &r.transfer), &other.name, &home, live),
+        }));
     }
 
     fn land(&mut self, job: Job) {
@@ -495,6 +566,20 @@ impl S {
                             self.peer = other.clone();
                             self.finding = false;
                         }
+                        if snap.transfer == self.pick.transfer {
+                            if let Some(o) = snap.offer.filter(|_| self.pick.offer.is_none()) {
+                                self.pick.ticks = session::default_ticks(&o.tree);
+                                self.pick.tree = Some(o.tree.clone());
+                                self.pick.offer = Some(o);
+                            }
+                            if let Some(p) = snap.picks.filter(|_| self.pick.picks.is_none()) {
+                                self.pick.picks = Some(p);
+                                self.start_moving(None);
+                            }
+                            if let Some(ep) = snap.key.filter(|_| self.pick.live.is_none()) {
+                                self.start_moving(Some(ep));
+                            }
+                        }
                     }
                     Err(e) => self.err = e,
                 }
@@ -507,6 +592,28 @@ impl S {
                 self.requests.push((r, String::new()));
                 self.polled_at = -100.0;
             }
+            Job::Scanned(n) => {
+                self.pick.scanning = false;
+                self.pick.ticks = session::default_ticks(&n);
+                self.pick.tree = Some(n);
+            }
+            Job::Published(r) => {
+                self.polled_at = -100.0;
+                if let Err(e) = r {
+                    self.pick.sent = false;
+                    if self.sending() == Some(false) {
+                        self.pick.picks = None;
+                    }
+                    self.err = e;
+                }
+            }
+            Job::Moved(r) => {
+                self.polled_at = -100.0;
+                if let Err(e) = r {
+                    self.err = e;
+                }
+            }
+            Job::Reported => {}
             Job::Connected(Err(e)) | Job::Registered(Err(e)) | Job::Asked(Err(e)) | Job::Answered(Err(e)) => self.err = e,
         }
     }
@@ -546,11 +653,40 @@ fn poll(s: &mut S, now: f64, tx: &mut Tx) -> bool {
             reload_layout(&p, &mut s.layout_seen);
         }
     }
+    if s.polled {
+        let t = s.transfer().map(|r| r.transfer.clone()).unwrap_or_default();
+        if t != s.pick.transfer || !s.pick.seen {
+            if !t.is_empty() && s.pick.seen {
+                s.tab = 3;
+            }
+            s.pick = Pick { transfer: t, seen: true, ..Pick::default() };
+        }
+    }
+    if !s.demo && s.tab == 3 && !s.pick.transfer.is_empty() && s.sending() == Some(true) && s.pick.tree.is_none() && !s.pick.scanning {
+        s.pick.scanning = true;
+        s.spawn(s.t("Scanning this Mac…", "Bu Mac taranıyor…"), || {
+            let home = me::home_dir();
+            Job::Scanned(scan::scan(&home, &["/Applications".into(), home.join("Applications")], true))
+        });
+    }
+    if let (Some(l), Some(b)) = (s.pick.live.as_ref().map(|l| l.lock().unwrap().clone()), s.bus.clone()) {
+        let finished = l.done || l.failed;
+        if !l.state.is_empty() && (l.state != s.pick.reported_state || (!finished && now - s.pick.reported > 10.0)) {
+            s.pick.reported = now;
+            s.pick.reported_state = l.state.clone();
+            let (t, sender) = (s.pick.transfer.clone(), s.sending() == Some(true));
+            s.spawn(String::new(), move || {
+                let _ = session::report(&b, &t, sender, &l);
+                Job::Reported
+            });
+        }
+    }
     if !s.demo && s.bus.is_some() && !s.polling && now - s.polled_at > POLL_S {
         s.polled_at = now;
         s.poll_bus();
     }
-    let live = s.session.as_ref().is_some_and(|x| x.state == "sending");
+    let moving = s.pick.live.as_ref().is_some_and(|l| matches!(l.lock().unwrap().state.as_str(), "sending" | "receiving"));
+    let live = moving || s.session.as_ref().is_some_and(|x| x.state == "sending");
     s.flow.dir = if s.hover_dir != 0.0 { s.hover_dir } else if s.sending() == Some(false) { -1.0 } else { 1.0 };
     s.flow.step(s.flowing || live || !s.busy.is_empty() || s.hover_dir != 0.0, dt);
     let mut lighting = false;
@@ -1055,6 +1191,141 @@ fn tab_soon(s: &S, what: String) -> El {
     col().w_full().gap(6.0).child(label(what, 13.0, 500.0, SOFT).wrap().w_full()).child(mono(s.t("next milestone", "sonraki adım"), 10.5, MUTED))
 }
 
+fn tick_row(s: &S, n: &Node, depth: usize, out: &mut Vec<El>) {
+    let (on, all) = session::count(n, &s.pick.ticks);
+    let open = s.pick.open.contains(&n.id);
+    let mark = if on == all { "✓" } else if on > 0 { "–" } else { "" };
+    let mut tick = el().key(format!("tick-{}", n.id)).size(16.0, 16.0).radius(4.0).center()
+        .fill(if on == 0 { FIELD } else { BLUE }).border(1.0, if on == 0 { EDGE } else { BLUE2 })
+        .child(mono(mark, 10.0, INK));
+    if !s.pick.sent {
+        let id = n.id.clone();
+        tick = tick.cursor(Cursor::Pointer).on_press(move |s: &mut S| {
+            let p = &mut s.pick;
+            if let Some(n) = p.tree.as_ref().and_then(|t| t.find(&id)) {
+                session::toggle(n, &mut p.ticks);
+            }
+        });
+    }
+    let arrow = if n.children.is_empty() {
+        el().size(14.0, 16.0)
+    } else {
+        let id = n.id.clone();
+        el().key(format!("open-{}", n.id)).size(14.0, 16.0).center().cursor(Cursor::Pointer)
+            .child(label(if open { "▾" } else { "▸" }, 11.0, 600.0, MUTED))
+            .on_press(move |s: &mut S| {
+                if !s.pick.open.remove(&id) {
+                    s.pick.open.insert(id.clone());
+                }
+            })
+    };
+    let mut r = row().w_full().h(22.0).gap(6.0).center_y().px(4.0).radius(5.0).fill(Color { a: 0.0, ..PANEL2 }).hover(PANEL2)
+        .child(el().w(depth as f32 * 14.0)).child(arrow).child(tick)
+        .child(label(n.name.clone(), 12.5, if depth == 0 { 650.0 } else { 500.0 }, if on == 0 { MUTED } else { INK }).grow(1.0));
+    if n.secret {
+        r = r.child(mono(s.t("secret", "gizli"), 9.5, BLUE2));
+    }
+    r = r.child(mono(fmt_bytes(n.size), 11.0, SOFT));
+    if !n.note.is_empty() {
+        r = r.help(n.note.clone());
+    }
+    out.push(r);
+    if open {
+        for c in &n.children {
+            tick_row(s, c, depth + 1, out);
+        }
+    }
+}
+
+fn tab_pick(s: &S) -> El {
+    if s.transfer().is_none() {
+        return tab_soon(s, s.t("Approve a session in 02 CONNECT first. Then the sender ticks what it offers and the receiver what it takes: only those go.",
+            "Önce 02 BAĞLAN'da bir oturum onaylanır. Sonra gönderen neyi sunduğunu, alan neyi alacağını işaretler: yalnızca onlar gider."));
+    }
+    let sender = s.sending() == Some(true);
+    let other = s.peer_device().map(|d| d.name.clone()).unwrap_or_default();
+    let Some(tree) = &s.pick.tree else {
+        let msg = if !sender { format!("{} {other}…", s.t("Waiting for the offer from", "Teklif bekleniyor:")) }
+            else if s.pick.scanning { s.t("Scanning this Mac: apps, tools, secrets, settings and files…", "Bu Mac taranıyor: uygulamalar, araçlar, gizli bilgiler, ayarlar ve dosyalar…") }
+            else { s.t("The scan starts here.", "Tarama burada başlar.") };
+        return col().w_full().gap(6.0).child(label(msg, 13.0, 500.0, SOFT).wrap().w_full());
+    };
+    let mut rows = Vec::new();
+    for c in &tree.children {
+        tick_row(s, c, 0, &mut rows);
+    }
+    let (on, all) = session::count(tree, &s.pick.ticks);
+    let action = match (s.pick.sent, sender) {
+        (false, true) => button(format!("{} {on}", s.t("Offer", "Sun")), true).key("offer").on_press(|s: &mut S| s.publish()),
+        (false, false) => button(format!("{} {on}", s.t("Take", "Al")), true).key("take").on_press(|s: &mut S| s.publish()),
+        (true, true) => label(format!("{} {other}…", s.t("Offered. Waiting for picks from", "Sunuldu. Seçim bekleniyor:")), 12.0, 600.0, ICE),
+        (true, false) => label(format!("{} {other}…", s.t("Picked. Waiting for files from", "Seçildi. Dosyalar bekleniyor:")), 12.0, 600.0, ICE),
+    };
+    col().w_full().gap(6.0)
+        .child(caps(if sender { s.t("TICK WHAT YOU OFFER", "SUNACAKLARINI İŞARETLE") } else { s.t("TICK WHAT YOU TAKE", "ALACAKLARINI İŞARETLE") }, MUTED))
+        .child(col().w_full().gap(1.0).children(rows).scroll(ScrollSpec { stick_bottom: false }).scroll_edge_fade(10.0).h(172.0))
+        .child(row().w_full().center_y().gap(8.0)
+            .child(mono(format!("{on}/{all} · {}", fmt_bytes(session::ticked_size(tree, &s.pick.ticks))), 11.5, SOFT))
+            .child(spacer()).child(action))
+}
+
+/// The command that starts the setup agent; Claude Code until one is chosen.
+fn agent_cmd(s: &S) -> String {
+    if s.cfg.agent.is_empty() { setup::AGENTS[0].1.into() } else { s.cfg.agent.clone() }
+}
+
+fn agent_name(s: &S) -> String {
+    let cmd = agent_cmd(s);
+    setup::AGENTS.iter().find(|(_, c)| *c == cmd).map(|(n, _)| n.to_string()).unwrap_or_else(|| "Custom".into())
+}
+
+fn tab_move(s: &S) -> El {
+    let Some(l) = s.pick.live.as_ref().map(|l| l.lock().unwrap().clone()) else {
+        return tab_soon(s, s.t("Nothing is moving yet. After 03 PICK the files go Mac to Mac, encrypted end to end, and an agent sets everything up.",
+            "Henüz bir şey taşınmıyor. 03 SEÇ'ten sonra dosyalar uçtan uca şifreli olarak Mac'ten Mac'e gider, sonra bir agent her şeyi kurar."));
+    };
+    let state = match l.state.as_str() {
+        "sending" => s.t("SENDING", "GÖNDERİLİYOR"),
+        "receiving" => s.t("RECEIVING", "ALINIYOR"),
+        "placing" => s.t("PUTTING THINGS IN PLACE", "YERLEŞTİRİLİYOR"),
+        "placed" => s.t("IN PLACE", "YERLEŞTİ"),
+        "done" => s.t("SENT", "GÖNDERİLDİ"),
+        "failed" => s.t("STOPPED", "DURDU"),
+        _ => s.t("STARTING", "BAŞLIYOR"),
+    };
+    let pct = if l.total > 0 { (l.bytes as f32 / l.total as f32).min(1.0) } else if l.done { 1.0 } else { 0.0 };
+    let w = layout().elements.left_panel.w - 28.0;
+    let mut c = col().w_full().gap(7.0)
+        .child(row().w_full().center_y().child(caps(state, if l.failed { ERR } else { BLUE2 })).child(spacer())
+            .child(mono(format!("{}/{} {}", l.items_done, l.items, s.t("items", "öğe")), 11.0, SOFT)))
+        .child(row().w_full().child(mono(format!("{} / {}", fmt_bytes(l.bytes), fmt_bytes(l.total)), 12.5, INK)).child(spacer()).child(mono(l.network.clone(), 11.0, SOFT)))
+        .child(el().w_full().h(6.0).radius(3.0).fill(FIELD).child(el().h(6.0).w(w * pct).radius(3.0).linear_gradient(1.57, [(0.0, BLUE), (1.0, ICE)])))
+        .child(label(l.current.clone(), 12.0, 500.0, MUTED));
+    if !l.note.is_empty() {
+        c = c.child(label(l.note.clone(), 11.5, 600.0, if l.failed { ERR } else { SOFT }).wrap().w_full());
+    }
+    if l.state == "done" {
+        c = c.child(label(s.t("Everything went across. The other Mac puts it in place and starts its agent.", "Her şey karşıya geçti. Diğer Mac yerleştirip agent'ını başlatır."), 12.5, 500.0, SOFT).wrap().w_full());
+    }
+    if let (true, Some(dir)) = (l.state == "placed", l.dir.clone()) {
+        let dir2 = dir.clone();
+        c = c.child(label(format!("{} {} · {} {}", l.placed, s.t("in place", "yerinde"), l.problems, s.t("to look at", "bakılacak")), 13.0, 650.0, INK))
+            .child(label(s.t("An agent finishes the setup from AGENTS.md and GOAL.md in the transfer's folder.", "Kurulumu aktarım klasöründeki AGENTS.md ve GOAL.md ile bir agent bitirir."), 12.0, 500.0, SOFT).wrap().w_full())
+            .child(row().w_full().gap(8.0).center_y()
+                .child(el().w(170.0).child(trigger("agent-dd", agent_name(s)).on_press(|s: &mut S| s.agent_open = !s.agent_open)))
+                .child(spacer())
+                .child(button(s.t("Open folder", "Klasörü aç"), false).key("open-dir").on_press(move |_: &mut S| {
+                    let _ = std::process::Command::new("open").arg(&dir2).spawn();
+                }))
+                .child(button(s.t("Start agent", "Agent'ı başlat"), true).key("start-agent").on_press(move |s: &mut S| {
+                    if let Err(e) = setup::start_agent(&agent_cmd(s), &dir) {
+                        s.err = e;
+                    }
+                })));
+    }
+    c
+}
+
 fn left_panel(s: &S, k: &Kit) -> El {
     let names = [("01", s.t("DEVICE", "CİHAZ")), ("02", s.t("CONNECT", "BAĞLAN")), ("03", s.t("PICK", "SEÇ")), ("04", s.t("MOVE", "TAŞI"))];
     let mut tabs = row().w_full().gap(4.0);
@@ -1068,10 +1339,8 @@ fn left_panel(s: &S, k: &Kit) -> El {
     let content = match s.tab {
         1 => tab_device(s, k),
         2 => tab_connect(s),
-        3 => tab_soon(s, s.t("The sender ticks what it offers in a tree; the receiver ticks what it takes. Only those go.",
-            "Gönderen bir ağaçta neyi sunduğunu işaretler, alan neyi alacağını. Yalnızca onlar gider.")),
-        _ => tab_soon(s, s.t("Files move Mac to Mac, encrypted; then the agent sets everything up.",
-            "Dosyalar şifreli olarak Mac'ten Mac'e gider, sonra agent her şeyi kurar.")),
+        3 => tab_pick(s),
+        _ => tab_move(s),
     };
     let r = layout().elements.left_panel;
     col().absolute(r.x, r.y).w(r.w).gap(8.0).child(tabs).child(card(r.h - 36.0).child(content))
@@ -1150,6 +1419,16 @@ fn overlays(s: &S) -> Vec<El> {
             })
         }).collect();
         out.push(menu("model-dd", 484.0, 260.0, items));
+    }
+    if s.agent_open && s.tab == 4 {
+        let items: Vec<El> = setup::AGENTS.iter().map(|&(name, cmd)| {
+            menu_row(name, agent_cmd(s) == cmd).key(format!("agent-{name}")).on_press(move |s: &mut S| {
+                s.cfg.agent = cmd.into();
+                s.cfg.save();
+                s.agent_open = false;
+            })
+        }).collect();
+        out.push(menu("agent-dd", 170.0, 150.0, items));
     }
     out
 }
@@ -1233,16 +1512,63 @@ fn init_demo() -> S {
     s
 }
 
-fn sending_scene(s: &mut S, this_sends: bool) {
+/// An approved session with Desk Pro, this Mac sending or receiving.
+fn accepted(s: &mut S, this_sends: bool) {
     demo(s);
     let (a, b) = if this_sends { ("7f3a2c91", "c04e19b7") } else { ("c04e19b7", "7f3a2c91") };
     let r = Request { ask: Ask::Send, from: a.into(), to: b.into(), at: bus::now() - 300, answer: Answer::Accepted, transfer: bus::transfer_dir(bus::now() - 280, a, b) };
+    s.pick = Pick { transfer: r.transfer.clone(), seen: true, ..Pick::default() };
     s.requests = vec![(r, String::new())];
+    s.session = Some(Session { state: "picking".into(), started_utc: bus::utc(bus::now() - 280), ..Session::default() });
+}
+
+fn demo_tree() -> Node {
+    let leaf = |id: &str, name: &str, size: u64, off: bool, secret: bool| Node { id: id.into(), name: name.into(), size, off, secret, ..Node::default() };
+    let group = |id: &str, name: &str, children: Vec<Node>| Node { id: id.into(), name: name.into(), size: children.iter().map(|c| c.size).sum(), children, ..Node::default() };
+    group("", "", vec![
+        group("apps", "Apps", vec![
+            group("apps/wave", "Wave", vec![leaf("apps/wave/app", "App", 310_000_000, false, false), leaf("apps/wave/settings", "Settings", 2_100_000, false, false), leaf("apps/wave/data", "Workspaces and layouts", 585_000_000, false, false)]),
+            group("apps/helium", "Helium", vec![leaf("apps/helium/app", "App", 421_000_000, false, false), leaf("apps/helium/data", "Profiles, history, logins", 1_930_000_000, false, false)]),
+            group("apps/tailscale", "Tailscale", vec![leaf("apps/tailscale/app", "App", 95_000_000, true, false)]),
+        ]),
+        group("tools", "Tools", vec![leaf("tools/brew", "Homebrew formulae and casks", 81_000, false, false)]),
+        group("secrets", "Secrets", vec![leaf("secrets/ssh", "SSH keys", 12_000, false, true), leaf("secrets/keychain", "Login keychain", 2_400_000, false, true), leaf("secrets/helium-key", "Helium Storage Key", 100, true, true)]),
+        group("shell", "Shell", vec![leaf("shell/zshrc", ".zshrc", 9_000, false, false), leaf("shell/gitconfig", ".gitconfig", 1_000, false, false)]),
+        group("ai", "AI", vec![leaf("ai/claude-code", "Claude Code", 6_100_000_000, false, false)]),
+        group("files", "Files", vec![leaf("files/documents", "Documents", 14_200_000_000, false, false), leaf("files/projects", "projects", 22_700_000_000, false, false)]),
+    ])
+}
+
+fn pick_scene(s: &mut S, this_sends: bool, sent: bool) {
+    accepted(s, this_sends);
+    let t = demo_tree();
+    s.pick.ticks = session::default_ticks(&t);
+    s.pick.open = ["apps", "apps/wave", "secrets"].map(String::from).into();
+    s.pick.tree = Some(t);
+    s.pick.sent = sent;
+    s.tab = 3;
+}
+
+fn live(l: Live) -> Option<session::Shared> {
+    Some(Arc::new(Mutex::new(l)))
+}
+
+fn sending_scene(s: &mut S, this_sends: bool) {
+    accepted(s, this_sends);
     s.session = Some(Session { state: "sending".into(), started_utc: bus::utc(bus::now() - 280), bytes: 23_400_000_000, total: 81_200_000_000, avg_bytes_per_s: 86_000_000, network: "LAN".into(), ..Session::default() });
+    s.pick.live = live(Live { state: if this_sends { "sending" } else { "receiving" }.into(), bytes: 23_400_000_000, total: 81_200_000_000, items_done: 14, items: 41, current: "Documents".into(), network: "LAN".into(), ..Live::default() });
     s.flowing = true;
     s.flow.dir = if this_sends { 1.0 } else { -1.0 };
     s.flow.v = s.flow.dir * FLOW_V;
     s.flow.pos = 0.37 * s.flow.dir;
+    s.tab = 4;
+}
+
+fn placed_scene(s: &mut S) {
+    accepted(s, false);
+    s.session = Some(Session { state: "done".into(), started_utc: bus::utc(bus::now() - 1180), bytes: 81_200_000_000, total: 81_200_000_000, avg_bytes_per_s: 91_000_000, network: "LAN".into(), ..Session::default() });
+    let dir = std::path::PathBuf::from("/Users/someone/MacySync/20261126-101240_c04e19b7_7f3a2c91");
+    s.pick.live = live(Live { state: "placed".into(), bytes: 81_200_000_000, total: 81_200_000_000, items_done: 41, items: 41, network: "LAN".into(), placed: 38, problems: 3, done: true, dir: Some(dir), ..Live::default() });
     s.tab = 4;
 }
 
@@ -1267,6 +1593,11 @@ pub fn run(demo_mode: bool) {
             ("device", |s| { demo(s); s.tab = 1; }),
             ("models", |s| { demo(s); s.tab = 1; s.model_open = true; }),
             ("request", |s| { demo(s); s.incoming = Some((Request { ask: Ask::Send, from: "c04e19b7".into(), to: "7f3a2c91".into(), at: bus::now(), answer: Answer::Pending, transfer: String::new() }, String::new())); }),
+            ("offer", |s| pick_scene(s, true, false)),
+            ("take", |s| pick_scene(s, false, false)),
+            ("offered", |s| pick_scene(s, true, true)),
+            ("placed", |s| placed_scene(s)),
+            ("agents", |s| { placed_scene(s); s.agent_open = true; }),
             ("sending", |s| sending_scene(s, true)),
             ("receiving", |s| sending_scene(s, false)),
             ("tr", |s| { sending_scene(s, false); s.tr = true; }),
