@@ -81,16 +81,31 @@ pub struct Offer {
     pub tree: Node,
 }
 
-/// (app, keychain service, account) of the key a Chromium browser encrypts saved passwords and cookies with.
-pub const BROWSER_KEYS: [(&str, &str, &str); 7] = [
-    ("Helium", "Helium Storage Key", "Helium"),
-    ("Chromium", "Chromium Safe Storage", "Chromium"),
-    ("Google Chrome", "Chrome Safe Storage", "Chrome"),
-    ("Brave Browser", "Brave Safe Storage", "Brave"),
-    ("Microsoft Edge", "Microsoft Edge Safe Storage", "Microsoft Edge"),
-    ("Vivaldi", "Vivaldi Safe Storage", "Vivaldi"),
-    ("Arc", "Arc Safe Storage", "Arc"),
-];
+/// (service, account) of each password item in the login keychain, read without the secrets (no dialog).
+fn keychain_items() -> Vec<(String, String)> {
+    let out = Command::new("security").arg("dump-keychain").output().map(|o| String::from_utf8_lossy(&o.stdout).to_string()).unwrap_or_default();
+    let field = |b: &str, k: &str| b.lines().find_map(|l| l.trim().strip_prefix(&format!("\"{k}\"<blob>=\"")).and_then(|v| v.strip_suffix('"')).map(str::to_string));
+    out.split("keychain: ").filter(|b| b.contains("class: \"genp\"")).filter_map(|b| Some((field(b, "svce")?, field(b, "acct")?))).collect()
+}
+
+/// The keychain item an app encrypts its saved passwords, cookies and logins with: a Chromium browser's or an
+/// Electron app's "<name> Safe Storage" (Google Chrome's "Chrome", Brave Browser's "Brave"), Helium's "Helium
+/// Storage Key".
+pub fn app_key(app: &str, items: &[(String, String)]) -> Option<(String, String)> {
+    let short = app.strip_prefix("Google ").or_else(|| app.strip_suffix(" Browser")).unwrap_or(app);
+    let names = [format!("{app} Safe Storage"), format!("{short} Safe Storage"), format!("{app} Storage Key")];
+    items.iter().find(|(s, _)| names.contains(s)).cloned()
+}
+
+/// The command that sends an app's key: a JSON line with the item's service, account, the app's path and the key,
+/// which the old Mac's user allows in a dialog (empty when nobody does in time).
+pub fn key_command(svc: &str, acct: &str, app: &str) -> String {
+    let sh = |s: &str| format!("'{}'", s.replace('\'', "'\\''"));
+    let js = |s: &str| sh(&s.replace('\\', "\\\\").replace('"', "\\\""));
+    // printf takes the fields as %s arguments: never read as its own escapes or formats
+    format!("printf '{{\"service\":\"%s\",\"account\":\"%s\",\"app\":\"%s\",\"key\":\"%s\"}}' {} {} {} \"$(security find-generic-password -w -s {} -a {} 2>/dev/null)\"",
+        js(svc), js(acct), js(app), sh(svc), sh(acct))
+}
 
 /// Folders rebuilt from source on the new Mac: skipped inside the person's own folders when asked to.
 pub const REBUILDABLE: [&str; 8] = ["node_modules", "target", ".venv", "venv", "__pycache__", ".gradle", "DerivedData", ".next"];
@@ -128,8 +143,8 @@ const KNOWN: &[Known] = &[
     Known { app: "Obsidian", extra: &[], note: "~/Library/Application Support/obsidian/obsidian.json lists the vaults by absolute path; rewrite them if the user name changed and check each vault folder arrived.", identity: false },
     Known { app: "Visual Studio Code", extra: &[("Extensions", &["~/.vscode/extensions"])], note: "Settings, keybindings and snippets are in ~/Library/Application Support/Code/User; extensions copy as is. Run `code --list-extensions` to check they load.", identity: false },
     Known { app: "Wave", extra: &[("Config", &["~/.config/waveterm"]), ("Workspaces and layouts", &["~/Library/Application Support/waveterm"])], note: "Wave keeps settings in ~/.config/waveterm, its workspaces, tabs and layouts in ~/Library/Application Support/waveterm (a SQLite database, copied whole) and the window's web storage in ~/Library/Application Support/Wave. Quit Wave before placing them. Widget commands that name the old home folder need the new one.", identity: false },
-    Known { app: "Helium", extra: &[], note: "Saved passwords and cookies are encrypted with the 'Helium Storage Key' item of the login keychain: put that key in place (see Secrets) before the first start, or the browser makes a new key and the old passwords can't be read.", identity: false },
-    Known { app: "Chromium", extra: &[], note: "Saved passwords and cookies need the 'Chromium Safe Storage' keychain key (see Secrets) in place before the first start.", identity: false },
+    Known { app: "Helium", extra: &[], note: "Saved passwords and cookies are encrypted with the 'Helium Storage Key' item of the login keychain; its Password key part brings it, before the first start.", identity: false },
+    Known { app: "Chromium", extra: &[], note: "Saved passwords and cookies need the 'Chromium Safe Storage' keychain key; its Password key part brings it, before the first start.", identity: false },
     Known { app: "Tailscale", extra: &[], note: "Sign in again on the new Mac; a copy would carry this Mac's node identity.", identity: true },
     Known { app: "RustDesk", extra: &[("Config", &["~/Library/Preferences/com.carriez.RustDesk"])], note: "Install fresh and set a new password; a copy would clone this Mac's RustDesk ID.", identity: true },
     Known { app: "AnyDesk", extra: &[("Config", &["~/.anydesk"])], note: "Install fresh; a copy would clone this Mac's AnyDesk ID.", identity: true },
@@ -195,7 +210,8 @@ pub fn scan(home: &Path, app_dirs: &[PathBuf], skip_rebuildable: bool) -> Node {
     let mut claimed: HashSet<String> = HashSet::new();
     let exists = |p: &str| expand(home, p).exists();
 
-    // Apps, each with its bundle, preferences, data and known extras.
+    // Apps, each with its bundle, preferences, data, known extras and the keychain key its saved logins need.
+    let keys = keychain_items();
     let mut apps = Vec::new();
     let support: Vec<PathBuf> = list(&lib.join("Application Support"));
     for dir in app_dirs {
@@ -228,6 +244,13 @@ pub fn scan(home: &Path, app_dirs: &[PathBuf], skip_rebuildable: bool) -> Node {
             }
             for p in parts.iter().flat_map(|p| p.paths.iter()) {
                 claimed.insert(p.clone());
+            }
+            if let Some((svc, acct)) = app_key(&name, &keys) {
+                // Ticked with the app: without it the app makes a new key and its saved logins can't be read.
+                parts.push(Node { id: format!("{id}/key"), name: "Password key".into(), command: key_command(&svc, &acct, &tilde(home, &app)),
+                    file: format!("{}.key.json", slug(&name)), secret: true,
+                    note: format!("The '{svc}' item of the old Mac's login keychain; macOS asks the old Mac's user to allow reading it once. MacySync adds it to this Mac's login keychain before the app first starts."),
+                    ..Node::default() });
             }
             let note = known.map(|k| k.note).unwrap_or("");
             let identity = known.is_some_and(|k| k.identity);
@@ -277,19 +300,8 @@ pub fn scan(home: &Path, app_dirs: &[PathBuf], skip_rebuildable: bool) -> Node {
         secret("secrets/gh", "GitHub CLI login", &["~/.config/gh"], "gh may keep its token in the keychain instead; run `gh auth status`, and `gh auth login` if it says so."),
         secret("secrets/tokens", "Token files (.npmrc, .netrc, cloud CLIs)", &["~/.npmrc", "~/.netrc", "~/.aws", "~/.docker/config.json", "~/.kube"], ""),
         secret("secrets/keychain", "Login keychain (as a second keychain)", &["~/Library/Keychains/login.keychain-db"],
-            "Do not replace the new Mac's login keychain. Add the copy as a second keychain: `security create-keychain` is not needed, copy it to ~/Library/Keychains/old-mac.keychain-db and run `security list-keychains -d user -s login.keychain-db old-mac.keychain-db`; it opens with the old Mac's login password. The person can then move items in Keychain Access."),
+            "Do not replace the new Mac's login keychain. Add the copy as a second keychain: `security create-keychain` is not needed, copy it to ~/Library/Keychains/old-mac.keychain-db and run `security list-keychains -d user -s login.keychain-db old-mac.keychain-db`; it opens with the old Mac's login password, or with an older one if the keychain kept it when the login password changed (seen on a real move). Apps' own keys come with each app's Password key part, so this copy is for the rest. The person can then move items in Keychain Access."),
     ];
-    // (app, keychain service, account) of the key each Chromium browser encrypts passwords and cookies with.
-    for (b, svc, acct) in BROWSER_KEYS {
-        if app_dirs.iter().any(|d| d.join(format!("{b}.app")).exists()) {
-            secrets.push(made(&format!("secrets/{}-key", slug(b)), &format!("{b} password key"), &format!("security find-generic-password -w -s '{svc}' -a '{acct}'"), &format!("{}-safe-storage.txt", slug(b)),
-                &format!("Before the first start of {b}, run `security add-generic-password -U -s '{svc}' -a '{acct}' -w \"$(cat <this file>)\"`, so its saved passwords and cookies open. If this file is empty (nobody was at the old Mac to allow reading the key), the same item is in the old login keychain: add that keychain to the search list (see Secrets) and unlock it once with the old Mac's password.")).with(|n| {
-                n.secret = true;
-                // Reading the key asks the old Mac's user in a dialog; only taken when ticked on purpose.
-                n.off = true;
-            }));
-        }
-    }
     for p in ["~/.ssh", "~/.gnupg", "~/.config/gh", "~/.npmrc", "~/.netrc", "~/.aws", "~/.docker", "~/.kube"] {
         claimed.insert(p.into());
     }
@@ -508,10 +520,36 @@ mod tests {
         // Empty groups are gone.
         assert!(root.find("leftover").is_none());
 
+        // An app's key: found by the app's name, Chrome's and Brave's short ones too, and not some other app's.
+        let items: Vec<(String, String)> = [("Chrome Safe Storage", "Chrome"), ("Brave Safe Storage", "Brave"), ("Helium Storage Key", "Helium"), ("Wave (Dev) Safe Storage", "Wave")]
+            .iter().map(|(s, a)| (s.to_string(), a.to_string())).collect();
+        assert_eq!(app_key("Google Chrome", &items).unwrap().0, "Chrome Safe Storage");
+        assert_eq!(app_key("Brave Browser", &items).unwrap().0, "Brave Safe Storage");
+        assert_eq!(app_key("Helium", &items).unwrap().1, "Helium");
+        assert!(app_key("Wave", &items).is_none());
+
         let keep: HashSet<String> = ["secrets/ssh".to_string()].into();
         let only = root.pruned(&keep).unwrap();
         assert_eq!(only.leaves().len(), 1);
         assert_eq!(only.children[0].id, "secrets");
         let _ = std::fs::remove_dir_all(&home);
+    }
+
+    /// The key command's JSON survives quotes and backslashes in the names, and asks `security` for that item.
+    #[test]
+    fn key_command_writes_one_json_line() {
+        let dir = std::env::temp_dir().join(format!("macysync-key-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // A stand-in `security`: the key only for the right item, so a wrong -s or -a shows.
+        std::fs::write(dir.join("security"), "#!/bin/sh\n[ \"$4\" = \"Tom's \\\"Safe\\\" Storage\" ] && [ \"$6\" = 'a\\b' ] && printf 'K3y+/='\n").unwrap();
+        Command::new("chmod").arg("+x").arg(dir.join("security")).status().unwrap();
+        let cmd = key_command("Tom's \"Safe\" Storage", "a\\b", "~/Applications/X Y.app");
+        let out = Command::new("/bin/sh").args(["-c", &cmd]).env("PATH", format!("{}:/usr/bin:/bin", dir.display())).output().unwrap();
+        let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap_or_else(|e| panic!("{e}: {}", String::from_utf8_lossy(&out.stdout)));
+        assert_eq!(v["service"], "Tom's \"Safe\" Storage");
+        assert_eq!(v["account"], "a\\b");
+        assert_eq!(v["app"], "~/Applications/X Y.app");
+        assert_eq!(v["key"], "K3y+/=");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

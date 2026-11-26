@@ -1,8 +1,9 @@
 //! The receiving side after the files land: put each item in place (keeping whatever was there), import
 //! preference files, then write AGENTS.md and GOAL.md for the agent that finishes the job, and start it.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crate::scan::Node;
 use crate::wire::{expand, safe};
@@ -30,6 +31,8 @@ pub struct Placed {
     pub imported: Vec<String>,
     /// Files made on the sender (a Brewfile…), now in the transfer folder.
     pub generated: Vec<PathBuf>,
+    /// Apps' keys added to this Mac's login keychain, by service.
+    pub keys: Vec<String>,
     pub problems: Vec<String>,
 }
 
@@ -45,6 +48,10 @@ pub fn place(staging: &Path, dir: &Path, old_home: &str, home: &Path, items: &[N
             let dst = dir.join("generated").join(&item.file);
             let _ = std::fs::create_dir_all(dst.parent().unwrap());
             match std::fs::rename(&src, &dst) {
+                Ok(()) if item.file.ends_with(".key.json") => match add_key(&dst, home) {
+                    Ok(svc) => p.keys.push(svc),
+                    Err(e) => p.problems.push(e),
+                },
                 Ok(()) => p.generated.push(dst),
                 Err(e) => p.problems.push(format!("{}: {e}", item.file)),
             }
@@ -92,6 +99,40 @@ pub fn place(staging: &Path, dir: &Path, old_home: &str, home: &Path, items: &[N
         }
         p
     }).collect()
+}
+
+#[derive(serde::Deserialize)]
+struct AppKey {
+    service: String,
+    account: String,
+    app: String,
+    key: String,
+}
+
+/// The `security -i` line that adds an app's key, the app (where it landed here) allowed to read it.
+fn key_line(k: &AppKey, home: &Path) -> String {
+    let q = |s: &str| format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""));
+    let hex: String = k.key.bytes().map(|b| format!("{b:02x}")).collect();
+    format!("add-generic-password -U -s {} -a {} -T {} -X {hex}\n", q(&k.service), q(&k.account), q(&expand(home, &k.app).to_string_lossy()))
+}
+
+/// Adds the key in `file` (from the old Mac) to this Mac's login keychain, through stdin so it never shows in a
+/// process list, then deletes the file. Returns the item's service.
+fn add_key(file: &Path, home: &Path) -> Result<String, String> {
+    let k: AppKey = serde_json::from_slice(&std::fs::read(file).map_err(|e| e.to_string())?).map_err(|e| format!("{}: {e}", file.display()))?;
+    if k.key.is_empty() {
+        let _ = std::fs::remove_file(file);
+        return Err(format!("the old Mac didn't hand over '{}' (nobody allowed it there in time): add the old keychain (see Secrets) and unlock it with its password, or sign in to the app again", k.service));
+    }
+    let mut c = Command::new("security").arg("-i").stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::piped()).spawn().map_err(|e| e.to_string())?;
+    c.stdin.take().unwrap().write_all(key_line(&k, home).as_bytes()).map_err(|e| e.to_string())?;
+    let o = c.wait_with_output().map_err(|e| e.to_string())?;
+    let err = String::from_utf8_lossy(&o.stderr).trim().to_string();
+    if !o.status.success() || !err.is_empty() {
+        return Err(format!("adding '{}' to the login keychain: {err}", k.service));
+    }
+    let _ = std::fs::remove_file(file);
+    Ok(k.service)
 }
 
 /// Points links that named the old home folder (`~/.local/bin/claude -> /Users/old/.local/share/...`) at the
@@ -151,6 +192,9 @@ pub fn write_brief(dir: &Path, from: &str, old_home: &str, home: &Path, placed: 
         }
         for f in &p.generated {
             g += &format!("- file from the old Mac: `{}`\n", f.display());
+        }
+        for s in &p.keys {
+            g += &format!("- added to this Mac's login keychain: `{s}` (done; start the app to check its saved logins)\n");
         }
         for k in &p.kept {
             g += &format!("- what was here before: `{}`\n", k.display());
@@ -227,5 +271,18 @@ mod tests {
         assert!(goal.contains("Keychain (secret)"));
         assert!(dir.join("AGENTS.md").exists());
         let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// A key's line quotes names with spaces and quotes, puts the app where it landed here, and carries the key
+    /// only as hex; an empty key is a problem, never an empty item.
+    #[test]
+    fn app_keys_go_in_by_hex_and_never_empty() {
+        let home = Path::new("/Users/new");
+        let k = AppKey { service: "Helium \"Storage\" Key".into(), account: "Helium".into(), app: "~/Applications/Helium.app".into(), key: "K3y+/=".into() };
+        assert_eq!(key_line(&k, home), "add-generic-password -U -s \"Helium \\\"Storage\\\" Key\" -a \"Helium\" -T \"/Users/new/Applications/Helium.app\" -X 4b33792b2f3d\n");
+        let f = std::env::temp_dir().join(format!("macysync-empty-key-{}.key.json", std::process::id()));
+        std::fs::write(&f, r#"{"service":"Helium Storage Key","account":"Helium","app":"/Applications/Helium.app","key":""}"#).unwrap();
+        assert!(add_key(&f, home).unwrap_err().contains("didn't hand over 'Helium Storage Key'"));
+        assert!(!f.exists(), "the file goes either way");
     }
 }
