@@ -239,6 +239,8 @@ fn receiving(ep: &Endpoint, offer: &Offer, picks: &Picks, dir: &Path, from: &str
         l.state = "receiving".into();
         l.started = bus::now();
         l.total = items.iter().map(|i| i.size).sum();
+        // Picked up after a stop: what already arrived counts.
+        l.bytes = items.iter().filter(|i| landed(&i.id)).map(|i| i.size).sum();
         l.items = items.len();
         l.dir = Some(dir.to_path_buf());
     }
@@ -258,12 +260,15 @@ fn receiving(ep: &Endpoint, offer: &Offer, picks: &Picks, dir: &Path, from: &str
         let l2 = live.clone();
         let r = wire::fetch(ep, need, &staging, |id, got| {
             let mut b = base.lock().unwrap();
+            let mut l = l2.lock().unwrap();
             if b.0 != id {
+                if !b.0.is_empty() {
+                    l.items_done += 1;
+                }
                 b.2 += b.1;
                 b.0 = id.to_string();
             }
             b.1 = got;
-            let mut l = l2.lock().unwrap();
             l.bytes = b.2 + got;
             l.current = names.get(id).cloned().unwrap_or_else(|| id.to_string());
         });

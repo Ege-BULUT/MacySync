@@ -94,7 +94,7 @@ pub fn accept(only: Vec<String>) -> Result<(), String> {
         }
     }
     let pending = mine.iter().filter(|(r, _)| r.to == me && r.answer == Answer::Pending && bus::now().saturating_sub(r.at) < 86400).max_by_key(|(r, _)| r.at).cloned();
-    let (r, sha) = pending.ok_or("no request is waiting for this Mac")?;
+    let Some((r, sha)) = pending else { return resume(&c, &mine) };
     let peer = if r.from == me { r.to.clone() } else { r.from.clone() };
     let other = device(&c.bus, &peer)?;
     let names = [(me.clone(), c.cfg.name.clone()), (other.id.clone(), other.name.clone())].into_iter().collect();
@@ -150,8 +150,32 @@ fn receiver(c: &Ctx, r: &Request, from: &Device, only: &[String]) -> Result<(), 
     session::put_sealed(&c.bus, &format!("{t}/picks.sealed"), &key, &picks, "picks")?;
     session::write_receiver(&c.bus, &t, &ReceiverDoc { state: "waiting".into(), items: picks.ids.len() as u64, ..ReceiverDoc::default() })?;
     let ep: Endpoint = wait(&format!("waiting for {} to start sending", from.name), Duration::from_secs(3600), || session::get_sealed(&c.bus, &format!("{t}/key.sealed"), &c.secret))?;
+    take(c, &t, from, ep, offer, picks)
+}
+
+/// Picks up a transfer this Mac was receiving when it stopped: the offer and picks are in its folder, the stream
+/// key on the bus, and the items that already arrived are skipped.
+fn resume(c: &Ctx, mine: &[(Request, String)]) -> Result<(), String> {
     let home = me::home_dir();
-    let dir: PathBuf = session::local_dir(&home, &t);
+    let open = |r: &Request| {
+        let d = session::local_dir(&home, &r.transfer);
+        d.join("picks.json").exists() && !d.join("GOAL.md").exists()
+    };
+    let r = mine.iter().map(|(r, _)| r).filter(|r| r.answer == Answer::Accepted && !r.transfer.is_empty() && r.sides().1 == c.cfg.id && open(r)).max_by_key(|r| r.at)
+        .ok_or("no request is waiting for this Mac, and no transfer to pick up")?;
+    let dir = session::local_dir(&home, &r.transfer);
+    let read = |f: &str| std::fs::read(dir.join(f)).map_err(|e| format!("{f}: {e}"));
+    let offer: Offer = serde_json::from_slice(&read("offer.json")?).map_err(|e| e.to_string())?;
+    let picks: Picks = serde_json::from_slice(&read("picks.json")?).map_err(|e| e.to_string())?;
+    let from = device(&c.bus, r.sides().0)?;
+    let ep: Endpoint = session::get_sealed(&c.bus, &format!("{}/key.sealed", r.transfer), &c.secret)?.ok_or("the sender never started this one")?;
+    println!("picking up {} from {}", r.transfer, from.name);
+    take(c, &r.transfer, &from, ep, offer, picks)
+}
+
+fn take(c: &Ctx, t: &str, from: &Device, ep: Endpoint, offer: Offer, picks: Picks) -> Result<(), String> {
+    let home = me::home_dir();
+    let dir: PathBuf = session::local_dir(&home, t);
     let live: session::Shared = Arc::new(Mutex::new(Live::default()));
     let (l2, d2, name) = (live.clone(), dir.clone(), from.name.clone());
     let worker = std::thread::spawn(move || session::receive(&ep, &offer, &picks, &d2, &name, &home, l2));
@@ -162,7 +186,7 @@ fn receiver(c: &Ctx, r: &Request, from: &Device, only: &[String]) -> Result<(), 
         println!("{} {} / {}  {}/{} items  {}  {}", l.state, gb(l.bytes), gb(l.total), l.items_done, l.items, l.current, l.note);
         if finished || last_write.elapsed() > Duration::from_secs(10) {
             last_write = Instant::now();
-            let _ = session::report(&c.bus, &t, false, &l);
+            let _ = session::report(&c.bus, t, false, &l);
         }
         if finished {
             println!("placed {} items, {} problems; the brief is in {}", l.placed, l.problems, dir.display());

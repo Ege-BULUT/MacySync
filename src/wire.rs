@@ -214,6 +214,8 @@ pub fn fetch(ep: &Endpoint, need: Vec<String>, staging: &Path, on: impl Fn(&str,
     });
     let stream = stream.ok_or_else(|| format!("can't reach the other Mac ({last_err})"))?;
     stream.set_nodelay(true).ok();
+    // A relayed connection can die without a reset; a minute without a byte counts as cut, and the caller asks again.
+    stream.set_read_timeout(Some(Duration::from_secs(60))).ok();
     let mut hello = seal::Writer::new(&key, stream.try_clone().map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
     hello.write_all(&serde_json::to_vec(&Hello { need: need.clone() }).unwrap()).map_err(|e| e.to_string())?;
     hello.finish().map_err(|e| e.to_string())?;
