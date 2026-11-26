@@ -16,7 +16,7 @@ use crate::look::{self, H, W, full};
 use crate::me::{self, Config, Hardware, Look};
 use crate::scan::{self, Node, Offer};
 use crate::session::{self, Live, Picks, ReceiverDoc};
-use crate::setup;
+use crate::{setup, tail};
 use crate::wire::Endpoint;
 
 // Metallic blue and metallic grey on a graphite ground. Rune colours are linear light: these are the sRGB hex
@@ -167,6 +167,8 @@ enum Job {
     Published(Result<(), String>),
     Moved(Result<(), String>),
     Reported,
+    /// MacySync's own Tailscale node: None while it isn't running.
+    Tail(Option<tail::Status>),
 }
 
 #[derive(Default)]
@@ -244,6 +246,8 @@ pub struct S {
     layout_seen: Option<std::time::SystemTime>,
     layout_checked: f32,
     pick: Pick,
+    tail: Option<tail::Status>,
+    tail_at: f32,
 }
 
 /// Where the dashes are along their curves, as in WavySync: they speed up towards `dir` (1 runs left to
@@ -323,6 +327,8 @@ fn init() -> S {
         layout_seen: None,
         layout_checked: 0.0,
         pick: Pick::default(),
+        tail: None,
+        tail_at: -100.0,
         cfg,
     }
 }
@@ -614,6 +620,7 @@ impl S {
                 }
             }
             Job::Reported => {}
+            Job::Tail(t) => self.tail = t,
             Job::Connected(Err(e)) | Job::Registered(Err(e)) | Job::Asked(Err(e)) | Job::Answered(Err(e)) => self.err = e,
         }
     }
@@ -680,6 +687,10 @@ fn poll(s: &mut S, now: f64, tx: &mut Tx) -> bool {
                 Job::Reported
             });
         }
+    }
+    if !s.demo && s.tab == 2 && now - s.tail_at > POLL_S {
+        s.tail_at = now;
+        s.spawn(String::new(), || Job::Tail(tail::status()));
     }
     if !s.demo && s.bus.is_some() && !s.polling && now - s.polled_at > POLL_S {
         s.polled_at = now;
@@ -1184,7 +1195,33 @@ fn tab_connect(s: &S) -> El {
         Some(r) if r.answer == Answer::Accepted => s.t("Approved. Next: 03 PICK.", "Onaylandı. Sırada: 03 SEÇ."),
         _ => String::new(),
     };
-    c.child(label(state, 12.0, 600.0, ICE).wrap().w_full())
+    c.child(label(state, 12.0, 600.0, ICE).wrap().w_full()).child(spacer()).child(tail_row(s))
+}
+
+/// MacySync's own Tailscale, for Macs the network keeps apart.
+fn tail_row(s: &S) -> El {
+    let t = s.tail.clone().unwrap_or_default();
+    let (text, action) = match t.state.as_str() {
+        "Running" => (format!("{} {}", s.t("MacySync's Tailscale is on:", "MacySync'in Tailscale'i açık:"), t.ip), None),
+        _ if !t.auth_url.is_empty() => (s.t("Sign in to Tailscale to put this Mac on your tailnet.", "Bu Mac'i tailnet'ine eklemek için Tailscale'e giriş yap."), Some(s.t("Sign in", "Giriş yap"))),
+        "" => (s.t("Macs can't see each other here? MacySync's own Tailscale joins them, apart from any Tailscale on this Mac.",
+            "Mac'ler burada birbirini görmüyor mu? MacySync'in kendi Tailscale'i bağlar, bu Mac'teki Tailscale'e dokunmaz."), Some(s.t("Use Tailscale", "Tailscale kullan"))),
+        _ => (s.t("Tailscale is starting…", "Tailscale başlıyor…"), None),
+    };
+    let mut r = row().w_full().gap(10.0).center_y().child(label(text, 11.5, 500.0, if t.state == "Running" { ICE } else { MUTED }).wrap().grow(1.0));
+    if let Some(a) = action {
+        let url = t.auth_url.clone();
+        r = r.child(button(a, false).key("tailscale").on_press(move |s: &mut S| {
+            if url.is_empty() {
+                let id = s.cfg.id.clone();
+                s.tail_at = s.now - POLL_S + 1.5;
+                s.spawn(s.t("Starting Tailscale…", "Tailscale başlatılıyor…"), move || Job::Tail(tail::start(&id).ok().and_then(|_| tail::status())));
+            } else {
+                let _ = std::process::Command::new("open").arg(&url).spawn();
+            }
+        }));
+    }
+    r
 }
 
 fn tab_soon(s: &S, what: String) -> El {
