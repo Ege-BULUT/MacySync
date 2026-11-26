@@ -1,12 +1,3990 @@
-{"placeholder": true, "models": [
- {"id": "mbp13-m1", "family": "pro", "marketing_name": "MacBook Pro (13-inch, M1, 2020)", "year": 2020, "chips": ["M1"], "screen_in": 13.3, "size_label": "13-inch",
-  "model_identifiers": ["MacBookPro17,1"], "design": {"lid": "flat", "notch": false, "touch_bar": true, "function_row": "touch-bar", "bezel": "thick", "dimensions_mm": {"width": 304.1, "depth": 212.4, "height": 15.6}},
-  "colors": [{"name": "Space Gray", "body_hex": "#7d7e80", "body_hex_dark": "#4a4b4d", "keyboard_hex": "#111111"}, {"name": "Silver", "body_hex": "#d6d7d9", "body_hex_dark": "#9a9b9d", "keyboard_hex": "#111111"}],
-  "part_numbers": {"MYD82": "Space Gray", "MYDA2": "Silver"}},
- {"id": "mbp14-m1pro", "family": "pro", "marketing_name": "MacBook Pro (14-inch, 2021)", "year": 2021, "chips": ["M1 Pro", "M1 Max"], "screen_in": 14.2, "size_label": "14-inch",
-  "model_identifiers": ["MacBookPro18,3", "MacBookPro18,4"], "design": {"lid": "flat", "notch": true, "touch_bar": false, "function_row": "full-height", "bezel": "thin", "dimensions_mm": {"width": 312.6, "depth": 221.2, "height": 15.5}},
-  "colors": [{"name": "Space Gray", "body_hex": "#6e6f72", "body_hex_dark": "#3f4043", "keyboard_hex": "#0d0d0d"}, {"name": "Silver", "body_hex": "#d9dadc", "body_hex_dark": "#a0a1a3", "keyboard_hex": "#0d0d0d"}], "part_numbers": {}},
- {"id": "mba13-m2", "family": "air", "marketing_name": "MacBook Air (M2, 2022)", "year": 2022, "chips": ["M2"], "screen_in": 13.6, "size_label": "13-inch",
-  "model_identifiers": ["Mac14,2"], "design": {"lid": "flat", "notch": true, "touch_bar": false, "function_row": "full-height", "bezel": "thin", "dimensions_mm": {"width": 304.1, "depth": 215.0, "height": 11.3}},
-  "colors": [{"name": "Midnight", "body_hex": "#2e3642", "body_hex_dark": "#1a1f27", "keyboard_hex": "#0d0d0d"}, {"name": "Starlight", "body_hex": "#e3dccf", "body_hex_dark": "#b3ab9d", "keyboard_hex": "#0d0d0d"}], "part_numbers": {}}
-]}
+{
+  "generated": "2026-11-26",
+  "schema_version": 1,
+  "notes": "Detection: read hw.model (sysctl) and match it against model_identifiers; that gives the model. Then read the Model Number from System Information (e.g. \"MYD82LL/A\") and look up its first 5 characters in that model's part_numbers; that gives the colour when the prefix is known. Build-to-order machines (Z-prefix) and regional/refurbished numbers are mostly not covered: when there is no match, show default_color and let the user choose. Identifiers shared by two models are listed in shared_identifiers; for those, use the part number prefix to pick the model, else ask the user.",
+  "field_notes": {
+    "colors": "Hex values are approximations. Apple publishes none; body_hex is sampled from Apple Store colour-swatch images, body_hex_dark is a computed darker shade, keyboard_hex is eyeballed.",
+    "design.corner_radius_hint": "Eyeballed drawing hint in mm at real scale; not measured or published by Apple. Treat as unverified for every model.",
+    "design.ports_left/ports_right": "Ordered rear (hinge) to front. Port sets come from Apple tech specs; side placement from Apple product imagery and descriptions; order within a side is approximate.",
+    "design.dimensions_mm": "From Apple tech specs (cm x 10). height_min is the thin front edge of the wedge designs.",
+    "design.display_aspect": "Native panel resolution from Apple tech specs; notch models include the menu-bar strip beside the notch.",
+    "part_number_sources": "apple-store = Apple Store product data (Nov 2026); everymac = everymac.com spec-page footnote (read via the Internet Archive). Every mapped prefix has at least one.",
+    "part_numbers_color_unknown": "Prefixes Apple lists for the model whose colour could not be confirmed; they identify the model but not the colour.",
+    "unverified": "design.unverified=true marks a design block with at least one field taken by analogy rather than from a source; design.unverified_note says which."
+  },
+  "shared_identifiers": {
+    "MacBookPro15,2": [
+      "mbp13-2018-4tb3",
+      "mbp13-2019-4tb3"
+    ],
+    "MacBookPro15,1": [
+      "mbp15-2018",
+      "mbp15-2019"
+    ],
+    "MacBookPro15,3": [
+      "mbp15-2018",
+      "mbp15-2019"
+    ]
+  },
+  "models": [
+    {
+      "id": "mba13-2018",
+      "family": "air",
+      "marketing_name": "MacBook Air (Retina, 13-inch, 2018)",
+      "year": 2018,
+      "chips": [
+        "Intel Core i5"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookAir8,1"
+      ],
+      "design": {
+        "lid": "wedge",
+        "notch": false,
+        "touch_bar": false,
+        "function_row": "half-height",
+        "corner_radius_hint": 9,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 15.6,
+          "height_min": 4.1
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt 3 (USB-C) ports; butterfly keyboard."
+      },
+      "colors": [
+        {
+          "name": "Gold",
+          "body_hex": "#F0DFD3",
+          "body_hex_dark": "#ADA198",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-gold-select-201810 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Only Apple's 2018-style swatch exists for Gold; those swatches render light finishes close to true (old Silver #DFE1E0 vs new #E3E4E5), but the real finish can read slightly pinker and deeper in photos."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Gold",
+      "part_numbers": {
+        "MRE82": "Space Gray",
+        "MRE92": "Space Gray",
+        "MREA2": "Silver",
+        "MREC2": "Silver",
+        "MREE2": "Gold",
+        "MREF2": "Gold"
+      },
+      "part_number_sources": {
+        "MRE82": [
+          "everymac"
+        ],
+        "MRE92": [
+          "everymac"
+        ],
+        "MREA2": [
+          "everymac"
+        ],
+        "MREC2": [
+          "everymac"
+        ],
+        "MREE2": [
+          "everymac"
+        ],
+        "MREF2": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MUQT2",
+        "MUQU2",
+        "MUQV2"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/111933"
+      ]
+    },
+    {
+      "id": "mba13-2019",
+      "family": "air",
+      "marketing_name": "MacBook Air (Retina, 13-inch, 2019)",
+      "year": 2019,
+      "chips": [
+        "Intel Core i5"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookAir8,2"
+      ],
+      "design": {
+        "lid": "wedge",
+        "notch": false,
+        "touch_bar": false,
+        "function_row": "half-height",
+        "corner_radius_hint": 9,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 15.6,
+          "height_min": 4.1
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt 3 (USB-C) ports; butterfly keyboard; True Tone."
+      },
+      "colors": [
+        {
+          "name": "Gold",
+          "body_hex": "#F0DFD3",
+          "body_hex_dark": "#ADA198",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-gold-select-201810 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Only Apple's 2018-style swatch exists for Gold; those swatches render light finishes close to true (old Silver #DFE1E0 vs new #E3E4E5), but the real finish can read slightly pinker and deeper in photos."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Gold",
+      "part_numbers": {
+        "MVFH2": "Space Gray",
+        "MVFJ2": "Space Gray",
+        "MVFK2": "Silver",
+        "MVFL2": "Silver",
+        "MVFM2": "Gold",
+        "MVFN2": "Gold"
+      },
+      "part_number_sources": {
+        "MVFH2": [
+          "everymac"
+        ],
+        "MVFJ2": [
+          "everymac"
+        ],
+        "MVFK2": [
+          "everymac"
+        ],
+        "MVFL2": [
+          "everymac"
+        ],
+        "MVFM2": [
+          "everymac"
+        ],
+        "MVFN2": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MVH62",
+        "MVH82"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/111948"
+      ]
+    },
+    {
+      "id": "mba13-2020",
+      "family": "air",
+      "marketing_name": "MacBook Air (Retina, 13-inch, 2020)",
+      "year": 2020,
+      "chips": [
+        "Intel Core i3",
+        "Intel Core i5",
+        "Intel Core i7"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookAir9,1"
+      ],
+      "design": {
+        "lid": "wedge",
+        "notch": false,
+        "touch_bar": false,
+        "function_row": "half-height",
+        "corner_radius_hint": 9,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 16.1,
+          "height_min": 4.1
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt 3 (USB-C) ports; Magic Keyboard (scissor)."
+      },
+      "colors": [
+        {
+          "name": "Gold",
+          "body_hex": "#F0DFD3",
+          "body_hex_dark": "#ADA198",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-gold-select-201810 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Only Apple's 2018-style swatch exists for Gold; those swatches render light finishes close to true (old Silver #DFE1E0 vs new #E3E4E5), but the real finish can read slightly pinker and deeper in photos."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Gold",
+      "part_numbers": {
+        "MVH22": "Space Gray",
+        "MVH42": "Silver",
+        "MVH52": "Gold",
+        "MWTJ2": "Space Gray",
+        "MWTK2": "Silver",
+        "MWTL2": "Gold"
+      },
+      "part_number_sources": {
+        "MVH22": [
+          "everymac"
+        ],
+        "MVH42": [
+          "everymac"
+        ],
+        "MVH52": [
+          "everymac"
+        ],
+        "MWTJ2": [
+          "everymac"
+        ],
+        "MWTK2": [
+          "everymac"
+        ],
+        "MWTL2": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/111991"
+      ]
+    },
+    {
+      "id": "mba13-m1",
+      "family": "air",
+      "marketing_name": "MacBook Air (M1, 2020)",
+      "year": 2020,
+      "chips": [
+        "M1"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookAir10,1"
+      ],
+      "design": {
+        "lid": "wedge",
+        "notch": false,
+        "touch_bar": false,
+        "function_row": "half-height",
+        "corner_radius_hint": 9,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 16.1,
+          "height_min": 4.1
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt / USB 4 ports."
+      },
+      "colors": [
+        {
+          "name": "Gold",
+          "body_hex": "#F0DFD3",
+          "body_hex_dark": "#ADA198",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-gold-select-201810 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Only Apple's 2018-style swatch exists for Gold; those swatches render light finishes close to true (old Silver #DFE1E0 vs new #E3E4E5), but the real finish can read slightly pinker and deeper in photos."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Gold",
+      "part_numbers": {
+        "MGN63": "Space Gray",
+        "MGN73": "Space Gray",
+        "MGN93": "Silver",
+        "MGNA3": "Silver",
+        "MGND3": "Gold",
+        "MGNE3": "Gold"
+      },
+      "part_number_sources": {
+        "MGN63": [
+          "everymac"
+        ],
+        "MGN73": [
+          "everymac"
+        ],
+        "MGN93": [
+          "everymac"
+        ],
+        "MGNA3": [
+          "everymac"
+        ],
+        "MGND3": [
+          "everymac"
+        ],
+        "MGNE3": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/111883"
+      ]
+    },
+    {
+      "id": "mba13-m2",
+      "family": "air",
+      "marketing_name": "MacBook Air (M2, 2022)",
+      "year": 2022,
+      "chips": [
+        "M2"
+      ],
+      "screen_in": 13.6,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "Mac14,2"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 215.0,
+          "height": 11.3
+        },
+        "display_aspect": "2560x1664",
+        "ports_note": "MagSafe 3 + two Thunderbolt / USB 4 ports."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#2E3642",
+          "body_hex_dark": "#212730",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202402 / mba15-midnight-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MC7U4": "Space Gray",
+        "MC7V4": "Silver",
+        "MC7W4": "Starlight",
+        "MC7X4": "Midnight",
+        "MLXW3": "Space Gray",
+        "MLXX3": "Space Gray",
+        "MLXY3": "Silver",
+        "MLY03": "Silver",
+        "MLY13": "Starlight",
+        "MLY23": "Starlight",
+        "MLY33": "Midnight",
+        "MLY43": "Midnight"
+      },
+      "part_number_sources": {
+        "MC7U4": [
+          "everymac"
+        ],
+        "MC7V4": [
+          "everymac"
+        ],
+        "MC7W4": [
+          "everymac"
+        ],
+        "MC7X4": [
+          "everymac"
+        ],
+        "MLXW3": [
+          "everymac"
+        ],
+        "MLXX3": [
+          "everymac"
+        ],
+        "MLXY3": [
+          "everymac"
+        ],
+        "MLY03": [
+          "everymac"
+        ],
+        "MLY13": [
+          "everymac"
+        ],
+        "MLY23": [
+          "everymac"
+        ],
+        "MLY33": [
+          "everymac"
+        ],
+        "MLY43": [
+          "everymac"
+        ]
+      },
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MC7U4, MC7V4, MC7W4, MC7X4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/111867"
+      ]
+    },
+    {
+      "id": "mba15-m2",
+      "family": "air",
+      "marketing_name": "MacBook Air (15-inch, M2, 2023)",
+      "year": 2023,
+      "chips": [
+        "M2"
+      ],
+      "screen_in": 15.3,
+      "size_label": "15-inch",
+      "model_identifiers": [
+        "Mac14,15"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 340.4,
+          "depth": 237.6,
+          "height": 11.5
+        },
+        "display_aspect": "2880x1864",
+        "ports_note": "MagSafe 3 + two Thunderbolt / USB 4 ports."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#2E3642",
+          "body_hex_dark": "#212730",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202402 / mba15-midnight-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MQKP3": "Space Gray",
+        "MQKQ3": "Space Gray",
+        "MQKR3": "Silver",
+        "MQKT3": "Silver",
+        "MQKU3": "Starlight",
+        "MQKV3": "Starlight",
+        "MQKW3": "Midnight",
+        "MQKX3": "Midnight"
+      },
+      "part_number_sources": {
+        "MQKP3": [
+          "everymac"
+        ],
+        "MQKQ3": [
+          "everymac"
+        ],
+        "MQKR3": [
+          "everymac"
+        ],
+        "MQKT3": [
+          "everymac"
+        ],
+        "MQKU3": [
+          "everymac"
+        ],
+        "MQKV3": [
+          "everymac"
+        ],
+        "MQKW3": [
+          "everymac"
+        ],
+        "MQKX3": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/111346"
+      ]
+    },
+    {
+      "id": "mba13-m3",
+      "family": "air",
+      "marketing_name": "MacBook Air (13-inch, M3, 2024)",
+      "year": 2024,
+      "chips": [
+        "M3"
+      ],
+      "screen_in": 13.6,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "Mac15,12"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 215.0,
+          "height": 11.3
+        },
+        "display_aspect": "2560x1664",
+        "ports_note": "MagSafe 3 + two Thunderbolt / USB 4 ports."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#2E3642",
+          "body_hex_dark": "#212730",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202402 / mba15-midnight-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MC8G4": "Space Gray",
+        "MC8H4": "Silver",
+        "MC8J4": "Starlight",
+        "MC8K4": "Midnight",
+        "MC8M4": "Space Gray",
+        "MC8N4": "Silver",
+        "MC8P4": "Starlight",
+        "MC8Q4": "Midnight",
+        "MRXN3": "Space Gray",
+        "MRXP3": "Space Gray",
+        "MRXQ3": "Silver",
+        "MRXR3": "Silver",
+        "MRXT3": "Starlight",
+        "MRXU3": "Starlight",
+        "MRXV3": "Midnight",
+        "MRXW3": "Midnight",
+        "MXCR3": "Space Gray",
+        "MXCT3": "Silver",
+        "MXCU3": "Starlight",
+        "MXCV3": "Midnight"
+      },
+      "part_number_sources": {
+        "MC8G4": [
+          "everymac"
+        ],
+        "MC8H4": [
+          "everymac"
+        ],
+        "MC8J4": [
+          "everymac"
+        ],
+        "MC8K4": [
+          "everymac"
+        ],
+        "MC8M4": [
+          "everymac"
+        ],
+        "MC8N4": [
+          "everymac"
+        ],
+        "MC8P4": [
+          "everymac"
+        ],
+        "MC8Q4": [
+          "everymac"
+        ],
+        "MRXN3": [
+          "everymac"
+        ],
+        "MRXP3": [
+          "everymac"
+        ],
+        "MRXQ3": [
+          "everymac"
+        ],
+        "MRXR3": [
+          "everymac"
+        ],
+        "MRXT3": [
+          "everymac"
+        ],
+        "MRXU3": [
+          "everymac"
+        ],
+        "MRXV3": [
+          "everymac"
+        ],
+        "MRXW3": [
+          "everymac"
+        ],
+        "MXCR3": [
+          "everymac"
+        ],
+        "MXCT3": [
+          "everymac"
+        ],
+        "MXCU3": [
+          "everymac"
+        ],
+        "MXCV3": [
+          "everymac"
+        ]
+      },
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MC8G4, MC8H4, MC8J4, MC8K4, MC8M4, MC8N4, MC8P4, MC8Q4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/118551"
+      ]
+    },
+    {
+      "id": "mba15-m3",
+      "family": "air",
+      "marketing_name": "MacBook Air (15-inch, M3, 2024)",
+      "year": 2024,
+      "chips": [
+        "M3"
+      ],
+      "screen_in": 15.3,
+      "size_label": "15-inch",
+      "model_identifiers": [
+        "Mac15,13"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 340.4,
+          "depth": 237.6,
+          "height": 11.5
+        },
+        "display_aspect": "2880x1864",
+        "ports_note": "MagSafe 3 + two Thunderbolt / USB 4 ports."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#2E3642",
+          "body_hex_dark": "#212730",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202402 / mba15-midnight-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MC9D4": "Space Gray",
+        "MC9E4": "Silver",
+        "MC9F4": "Starlight",
+        "MC9G4": "Midnight",
+        "MC9H4": "Space Gray",
+        "MC9J4": "Silver",
+        "MC9K4": "Starlight",
+        "MC9L4": "Midnight",
+        "MRYM3": "Space Gray",
+        "MRYN3": "Space Gray",
+        "MRYP3": "Silver",
+        "MRYQ3": "Silver",
+        "MRYR3": "Starlight",
+        "MRYT3": "Starlight",
+        "MRYU3": "Midnight",
+        "MRYV3": "Midnight",
+        "MXD13": "Space Gray",
+        "MXD23": "Silver",
+        "MXD33": "Starlight",
+        "MXD43": "Midnight"
+      },
+      "part_number_sources": {
+        "MC9D4": [
+          "everymac"
+        ],
+        "MC9E4": [
+          "everymac"
+        ],
+        "MC9F4": [
+          "everymac"
+        ],
+        "MC9G4": [
+          "everymac"
+        ],
+        "MC9H4": [
+          "everymac"
+        ],
+        "MC9J4": [
+          "everymac"
+        ],
+        "MC9K4": [
+          "everymac"
+        ],
+        "MC9L4": [
+          "everymac"
+        ],
+        "MRYM3": [
+          "everymac"
+        ],
+        "MRYN3": [
+          "everymac"
+        ],
+        "MRYP3": [
+          "everymac"
+        ],
+        "MRYQ3": [
+          "everymac"
+        ],
+        "MRYR3": [
+          "everymac"
+        ],
+        "MRYT3": [
+          "everymac"
+        ],
+        "MRYU3": [
+          "everymac"
+        ],
+        "MRYV3": [
+          "everymac"
+        ],
+        "MXD13": [
+          "everymac"
+        ],
+        "MXD23": [
+          "everymac"
+        ],
+        "MXD33": [
+          "everymac"
+        ],
+        "MXD43": [
+          "everymac"
+        ]
+      },
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MC9D4, MC9E4, MC9F4, MC9G4, MC9H4, MC9J4, MC9K4, MC9L4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/118552"
+      ]
+    },
+    {
+      "id": "mba13-m4",
+      "family": "air",
+      "marketing_name": "MacBook Air (13-inch, M4, 2025)",
+      "year": 2025,
+      "chips": [
+        "M4"
+      ],
+      "screen_in": 13.6,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "Mac16,12"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 215.0,
+          "height": 11.3
+        },
+        "display_aspect": "2560x1664",
+        "ports_note": "MagSafe 3 + two Thunderbolt 4 ports."
+      },
+      "colors": [
+        {
+          "name": "Sky Blue",
+          "body_hex": "#C8D8E0",
+          "body_hex_dark": "#909CA1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-skyblue-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#383F49",
+          "body_hex_dark": "#282D35",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202503 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Sky Blue",
+      "part_numbers": {
+        "MC654": "Silver",
+        "MC6A4": "Starlight",
+        "MC6C4": "Midnight",
+        "MC6T4": "Sky Blue",
+        "MC6U4": "Sky Blue",
+        "MC6V4": "Sky Blue",
+        "MW0W3": "Silver",
+        "MW0X3": "Silver",
+        "MW0Y3": "Starlight",
+        "MW103": "Starlight",
+        "MW123": "Midnight",
+        "MW133": "Midnight"
+      },
+      "part_number_sources": {
+        "MC654": [
+          "everymac"
+        ],
+        "MC6A4": [
+          "everymac"
+        ],
+        "MC6C4": [
+          "everymac"
+        ],
+        "MC6T4": [
+          "everymac"
+        ],
+        "MC6U4": [
+          "everymac"
+        ],
+        "MC6V4": [
+          "everymac"
+        ],
+        "MW0W3": [
+          "everymac"
+        ],
+        "MW0X3": [
+          "everymac"
+        ],
+        "MW0Y3": [
+          "everymac"
+        ],
+        "MW103": [
+          "everymac"
+        ],
+        "MW123": [
+          "everymac"
+        ],
+        "MW133": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MDG24",
+        "MDG54",
+        "MDG64"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/122209"
+      ]
+    },
+    {
+      "id": "mba15-m4",
+      "family": "air",
+      "marketing_name": "MacBook Air (15-inch, M4, 2025)",
+      "year": 2025,
+      "chips": [
+        "M4"
+      ],
+      "screen_in": 15.3,
+      "size_label": "15-inch",
+      "model_identifiers": [
+        "Mac16,13"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 340.4,
+          "depth": 237.6,
+          "height": 11.5
+        },
+        "display_aspect": "2880x1864",
+        "ports_note": "MagSafe 3 + two Thunderbolt 4 ports."
+      },
+      "colors": [
+        {
+          "name": "Sky Blue",
+          "body_hex": "#C8D8E0",
+          "body_hex_dark": "#909CA1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-skyblue-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#383F49",
+          "body_hex_dark": "#282D35",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202503 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Sky Blue",
+      "part_numbers": {
+        "MC6J4": "Silver",
+        "MC6K4": "Starlight",
+        "MC6L4": "Midnight",
+        "MC7A4": "Sky Blue",
+        "MC7C4": "Sky Blue",
+        "MC7D4": "Sky Blue",
+        "MW1G3": "Silver",
+        "MW1H3": "Silver",
+        "MW1J3": "Starlight",
+        "MW1K3": "Starlight",
+        "MW1L3": "Midnight",
+        "MW1M3": "Midnight"
+      },
+      "part_number_sources": {
+        "MC6J4": [
+          "everymac"
+        ],
+        "MC6K4": [
+          "everymac"
+        ],
+        "MC6L4": [
+          "everymac"
+        ],
+        "MC7A4": [
+          "everymac"
+        ],
+        "MC7C4": [
+          "everymac"
+        ],
+        "MC7D4": [
+          "everymac"
+        ],
+        "MW1G3": [
+          "everymac"
+        ],
+        "MW1H3": [
+          "everymac"
+        ],
+        "MW1J3": [
+          "everymac"
+        ],
+        "MW1K3": [
+          "everymac"
+        ],
+        "MW1L3": [
+          "everymac"
+        ],
+        "MW1M3": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MDG34",
+        "MDG84",
+        "MDG94"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/122210"
+      ]
+    },
+    {
+      "id": "mba13-m5",
+      "family": "air",
+      "marketing_name": "MacBook Air (13-inch, M5)",
+      "year": 2026,
+      "chips": [
+        "M5"
+      ],
+      "screen_in": 13.6,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "Mac17,3"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 215.0,
+          "height": 11.3
+        },
+        "display_aspect": "2560x1664",
+        "ports_note": "MagSafe 3 + two Thunderbolt 4 ports.",
+        "unverified": true,
+        "unverified_note": "Port set is from Apple tech specs; left/right placement is assumed from the predecessor chassis and not confirmed from photos of this model. Notch assumed from the unchanged 2560x1664 panel."
+      },
+      "colors": [
+        {
+          "name": "Sky Blue",
+          "body_hex": "#C8D8E0",
+          "body_hex_dark": "#909CA1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-skyblue-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#383F49",
+          "body_hex_dark": "#282D35",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202503 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Sky Blue",
+      "part_numbers": {
+        "MDH74": "Silver",
+        "MDH84": "Silver",
+        "MDH94": "Silver",
+        "MDHA4": "Starlight",
+        "MDHC4": "Starlight",
+        "MDHD4": "Starlight",
+        "MDHE4": "Midnight",
+        "MDHF4": "Midnight",
+        "MDHG4": "Midnight",
+        "MDHH4": "Sky Blue",
+        "MDHJ4": "Sky Blue",
+        "MDHK4": "Sky Blue",
+        "MGP74": "Starlight",
+        "MGP84": "Midnight",
+        "MGP94": "Sky Blue"
+      },
+      "part_number_sources": {
+        "MDH74": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDH84": [
+          "apple-store"
+        ],
+        "MDH94": [
+          "apple-store"
+        ],
+        "MDHA4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDHC4": [
+          "apple-store"
+        ],
+        "MDHD4": [
+          "apple-store"
+        ],
+        "MDHE4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDHF4": [
+          "apple-store"
+        ],
+        "MDHG4": [
+          "apple-store"
+        ],
+        "MDHH4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDHJ4": [
+          "apple-store"
+        ],
+        "MDHK4": [
+          "apple-store"
+        ],
+        "MGP74": [
+          "apple-store"
+        ],
+        "MGP84": [
+          "apple-store"
+        ],
+        "MGP94": [
+          "apple-store"
+        ]
+      },
+      "apple_list_notes": [
+        "Apple lists MDH84 twice and no MDH94; the Apple Store and everymac both give MDH94 (Silver, 24 GB, 1 TB).",
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MDH94, MGP74, MGP84, MGP94"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/126320"
+      ]
+    },
+    {
+      "id": "mba15-m5",
+      "family": "air",
+      "marketing_name": "MacBook Air (15-inch, M5)",
+      "year": 2026,
+      "chips": [
+        "M5"
+      ],
+      "screen_in": 15.3,
+      "size_label": "15-inch",
+      "model_identifiers": [
+        "Mac17,4"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 10,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 340.4,
+          "depth": 237.6,
+          "height": 11.5
+        },
+        "display_aspect": "2880x1864",
+        "ports_note": "MagSafe 3 + two Thunderbolt 4 ports.",
+        "unverified": true,
+        "unverified_note": "Port set is from Apple tech specs; left/right placement is assumed from the predecessor chassis and not confirmed from photos of this model. Notch assumed from the unchanged 2880x1864 panel."
+      },
+      "colors": [
+        {
+          "name": "Sky Blue",
+          "body_hex": "#C8D8E0",
+          "body_hex_dark": "#909CA1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-skyblue-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Starlight",
+          "body_hex": "#F0E4D3",
+          "body_hex_dark": "#ADA498",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-starlight-select-202402 / mba15-starlight-select-202503 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Midnight",
+          "body_hex": "#383F49",
+          "body_hex_dark": "#282D35",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-midnight-select-202503 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Sky Blue",
+      "part_numbers": {
+        "MDV94": "Silver",
+        "MDVA4": "Silver",
+        "MDVC4": "Silver",
+        "MDVD4": "Starlight",
+        "MDVE4": "Starlight",
+        "MDVF4": "Starlight",
+        "MDVH4": "Midnight",
+        "MDVK4": "Midnight",
+        "MDVN4": "Midnight",
+        "MDVQ4": "Sky Blue",
+        "MDVT4": "Sky Blue",
+        "MDVU4": "Sky Blue",
+        "MGPC4": "Starlight",
+        "MGPD4": "Midnight",
+        "MGPE4": "Sky Blue"
+      },
+      "part_number_sources": {
+        "MDV94": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVA4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVC4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVD4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVE4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVF4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVH4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVK4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVN4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVQ4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVT4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MDVU4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGPC4": [
+          "apple-store"
+        ],
+        "MGPD4": [
+          "apple-store"
+        ],
+        "MGPE4": [
+          "apple-store"
+        ]
+      },
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MGPC4, MGPD4, MGPE4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/102869",
+        "https://support.apple.com/en-us/126321"
+      ]
+    },
+    {
+      "id": "mbp13-2018-4tb3",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (13-inch, 2018, Four Thunderbolt 3 ports)",
+      "year": 2018,
+      "chips": [
+        "Intel Core i5",
+        "Intel Core i7"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookPro15,2"
+      ],
+      "identifier_notes": {
+        "MacBookPro15,2": "Shared with MacBook Pro (13-inch, 2019, Four Thunderbolt 3 ports); use the part number to tell them apart."
+      },
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 8,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 14.9
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Four Thunderbolt 3 (USB-C) ports; butterfly keyboard; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MR9Q2": "Space Gray",
+        "MR9R2": "Space Gray",
+        "MR9U2": "Silver",
+        "MR9V2": "Silver"
+      },
+      "part_number_sources": {
+        "MR9Q2": [
+          "everymac"
+        ],
+        "MR9R2": [
+          "everymac"
+        ],
+        "MR9U2": [
+          "everymac"
+        ],
+        "MR9V2": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MR9T2"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111925"
+      ]
+    },
+    {
+      "id": "mbp15-2018",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (15-inch, 2018)",
+      "year": 2018,
+      "chips": [
+        "Intel Core i7",
+        "Intel Core i9"
+      ],
+      "screen_in": 15.4,
+      "size_label": "15-inch",
+      "model_identifiers": [
+        "MacBookPro15,1",
+        "MacBookPro15,3"
+      ],
+      "identifier_notes": {
+        "MacBookPro15,1": "Shared with MacBook Pro (15-inch, 2019).",
+        "MacBookPro15,3": "Radeon Pro Vega 16/20 build-to-order models (offered from Nov 2018). Listed by everymac; Apple's identify page lists only MacBookPro15,1 for 2018. Also used by the 2019 Vega models."
+      },
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 9,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 349.3,
+          "depth": 240.7,
+          "height": 15.5
+        },
+        "display_aspect": "2880x1800",
+        "ports_note": "Four Thunderbolt 3 (USB-C) ports; butterfly keyboard; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MR932": "Space Gray",
+        "MR942": "Space Gray",
+        "MR962": "Silver",
+        "MR972": "Silver"
+      },
+      "part_number_sources": {
+        "MR932": [
+          "everymac"
+        ],
+        "MR942": [
+          "everymac"
+        ],
+        "MR962": [
+          "everymac"
+        ],
+        "MR972": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MR952",
+        "MUQH2"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111949"
+      ]
+    },
+    {
+      "id": "mbp13-2019-4tb3",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (13-inch, 2019, Four Thunderbolt 3 ports)",
+      "year": 2019,
+      "chips": [
+        "Intel Core i5",
+        "Intel Core i7"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookPro15,2"
+      ],
+      "identifier_notes": {
+        "MacBookPro15,2": "Shared with MacBook Pro (13-inch, 2018, Four Thunderbolt 3 ports); use the part number to tell them apart."
+      },
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 8,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 14.9
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Four Thunderbolt 3 (USB-C) ports; butterfly keyboard; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MV962": "Space Gray",
+        "MV972": "Space Gray",
+        "MV992": "Silver",
+        "MV9A2": "Silver"
+      },
+      "part_number_sources": {
+        "MV962": [
+          "everymac"
+        ],
+        "MV972": [
+          "everymac"
+        ],
+        "MV992": [
+          "everymac"
+        ],
+        "MV9A2": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MV982"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111997"
+      ]
+    },
+    {
+      "id": "mbp15-2019",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (15-inch, 2019)",
+      "year": 2019,
+      "chips": [
+        "Intel Core i7",
+        "Intel Core i9"
+      ],
+      "screen_in": 15.4,
+      "size_label": "15-inch",
+      "model_identifiers": [
+        "MacBookPro15,1",
+        "MacBookPro15,3"
+      ],
+      "identifier_notes": {
+        "MacBookPro15,1": "Shared with MacBook Pro (15-inch, 2018); use the part number to tell them apart.",
+        "MacBookPro15,3": "Radeon Pro Vega 16/20 build-to-order models; also used by 2018 Vega models."
+      },
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 9,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 349.3,
+          "depth": 240.7,
+          "height": 15.5
+        },
+        "display_aspect": "2880x1800",
+        "ports_note": "Four Thunderbolt 3 (USB-C) ports; butterfly keyboard; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MV902": "Space Gray",
+        "MV912": "Space Gray",
+        "MV922": "Silver",
+        "MV932": "Silver"
+      },
+      "part_number_sources": {
+        "MV902": [
+          "everymac"
+        ],
+        "MV912": [
+          "everymac"
+        ],
+        "MV922": [
+          "everymac"
+        ],
+        "MV932": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MV942",
+        "MV952"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111941"
+      ]
+    },
+    {
+      "id": "mbp13-2019-2tb3",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (13-inch, 2019, Two Thunderbolt 3 ports)",
+      "year": 2019,
+      "chips": [
+        "Intel Core i5",
+        "Intel Core i7"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookPro15,4"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 8,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 14.9
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt 3 (USB-C) ports; butterfly keyboard; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MUHN2": "Space Gray",
+        "MUHP2": "Space Gray",
+        "MUHQ2": "Silver",
+        "MUHR2": "Silver"
+      },
+      "part_number_sources": {
+        "MUHN2": [
+          "everymac"
+        ],
+        "MUHP2": [
+          "everymac"
+        ],
+        "MUHQ2": [
+          "everymac"
+        ],
+        "MUHR2": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111945"
+      ]
+    },
+    {
+      "id": "mbp16-2019",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (16-inch, 2019)",
+      "year": 2019,
+      "chips": [
+        "Intel Core i7",
+        "Intel Core i9"
+      ],
+      "screen_in": 16.0,
+      "size_label": "16-inch",
+      "model_identifiers": [
+        "MacBookPro16,1",
+        "MacBookPro16,4"
+      ],
+      "identifier_notes": {
+        "MacBookPro16,4": "Radeon Pro 5600M build-to-order models (everymac)."
+      },
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 9,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 357.9,
+          "depth": 245.9,
+          "height": 16.2
+        },
+        "display_aspect": "3072x1920",
+        "ports_note": "Four Thunderbolt 3 (USB-C) ports; Magic Keyboard; Touch Bar.",
+        "unverified": true,
+        "unverified_note": "Headphone jack side not confirmed from a source; drawn on the right like the 15-inch. Bezel is thinner than the 15-inch but still classed \"thick\" next to the 2021+ design."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MVVJ2": "Space Gray",
+        "MVVK2": "Space Gray",
+        "MVVL2": "Silver",
+        "MVVM2": "Silver"
+      },
+      "part_number_sources": {
+        "MVVJ2": [
+          "everymac"
+        ],
+        "MVVK2": [
+          "everymac"
+        ],
+        "MVVL2": [
+          "everymac"
+        ],
+        "MVVM2": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111932"
+      ]
+    },
+    {
+      "id": "mbp13-2020-4tb3",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (13-inch, 2020, Four Thunderbolt 3 ports)",
+      "year": 2020,
+      "chips": [
+        "Intel Core i5",
+        "Intel Core i7"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookPro16,2"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 8,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 15.6
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Four Thunderbolt 3 (USB-C) ports; Magic Keyboard; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MWP42": "Space Gray",
+        "MWP52": "Space Gray",
+        "MWP72": "Silver",
+        "MWP82": "Silver"
+      },
+      "part_number_sources": {
+        "MWP42": [
+          "everymac"
+        ],
+        "MWP52": [
+          "everymac"
+        ],
+        "MWP72": [
+          "everymac"
+        ],
+        "MWP82": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MWP62"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111339"
+      ]
+    },
+    {
+      "id": "mbp13-2020-2tb3",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (13-inch, 2020, Two Thunderbolt 3 ports)",
+      "year": 2020,
+      "chips": [
+        "Intel Core i5",
+        "Intel Core i7"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookPro16,3"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 8,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 15.6
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt 3 (USB-C) ports; Magic Keyboard; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MXK32": "Space Gray",
+        "MXK52": "Space Gray",
+        "MXK62": "Silver",
+        "MXK72": "Silver"
+      },
+      "part_number_sources": {
+        "MXK32": [
+          "everymac"
+        ],
+        "MXK52": [
+          "everymac"
+        ],
+        "MXK62": [
+          "everymac"
+        ],
+        "MXK72": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111981"
+      ]
+    },
+    {
+      "id": "mbp13-m1",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (13-inch, M1, 2020)",
+      "year": 2020,
+      "chips": [
+        "M1"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "MacBookPro17,1"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 8,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 15.6
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt / USB 4 ports; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MYD82": "Space Gray",
+        "MYD92": "Space Gray",
+        "MYDA2": "Silver",
+        "MYDC2": "Silver"
+      },
+      "part_number_sources": {
+        "MYD82": [
+          "everymac"
+        ],
+        "MYD92": [
+          "everymac"
+        ],
+        "MYDA2": [
+          "everymac"
+        ],
+        "MYDC2": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MYD83"
+      ],
+      "apple_list_notes": [
+        "Apple's identify page lists \"MYD83xx/A\" and not MYD82; everymac and US retailer listings give MYD82 as the Space Gray 256 GB base model, so MYD83 looks like a typo on Apple's page. MYD83 is kept only in part_numbers_color_unknown.",
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MYD82"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111893"
+      ]
+    },
+    {
+      "id": "mbp14-2021",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, 2021)",
+      "year": 2021,
+      "chips": [
+        "M1 Pro",
+        "M1 Max"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "MacBookPro18,3",
+        "MacBookPro18,4"
+      ],
+      "identifier_notes": {
+        "MacBookPro18,3": "M1 Pro",
+        "MacBookPro18,4": "M1 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#868789",
+          "body_hex_dark": "#606163",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spacegray-select-202301 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MKGP3": "Space Gray",
+        "MKGQ3": "Space Gray",
+        "MKGR3": "Silver",
+        "MKGT3": "Silver"
+      },
+      "part_number_sources": {
+        "MKGP3": [
+          "everymac"
+        ],
+        "MKGQ3": [
+          "everymac"
+        ],
+        "MKGR3": [
+          "everymac"
+        ],
+        "MKGT3": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111902"
+      ]
+    },
+    {
+      "id": "mbp16-2021",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (16-inch, 2021)",
+      "year": 2021,
+      "chips": [
+        "M1 Pro",
+        "M1 Max"
+      ],
+      "screen_in": 16.2,
+      "size_label": "16-inch",
+      "model_identifiers": [
+        "MacBookPro18,1",
+        "MacBookPro18,2"
+      ],
+      "identifier_notes": {
+        "MacBookPro18,1": "M1 Pro",
+        "MacBookPro18,2": "M1 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 355.7,
+          "depth": 248.1,
+          "height": 16.8
+        },
+        "display_aspect": "3456x2234",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#DFE1E0",
+          "body_hex_dark": "#A1A2A1",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store macbook-air-silver-select-201810 / mbp14-silver-select-202110 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#868789",
+          "body_hex_dark": "#606163",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spacegray-select-202301 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MK183": "Space Gray",
+        "MK193": "Space Gray",
+        "MK1A3": "Space Gray",
+        "MK1E3": "Silver",
+        "MK1F3": "Silver",
+        "MK1H3": "Silver"
+      },
+      "part_number_sources": {
+        "MK183": [
+          "everymac"
+        ],
+        "MK193": [
+          "everymac"
+        ],
+        "MK1A3": [
+          "everymac"
+        ],
+        "MK1E3": [
+          "everymac"
+        ],
+        "MK1F3": [
+          "everymac"
+        ],
+        "MK1H3": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111901"
+      ]
+    },
+    {
+      "id": "mbp13-m2",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (13-inch, M2, 2022)",
+      "year": 2022,
+      "chips": [
+        "M2"
+      ],
+      "screen_in": 13.3,
+      "size_label": "13-inch",
+      "model_identifiers": [
+        "Mac14,7"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": true,
+        "function_row": "touch-bar",
+        "corner_radius_hint": 8,
+        "bezel": "thick",
+        "ports_left": [
+          "thunderbolt",
+          "thunderbolt"
+        ],
+        "ports_right": [
+          "headphone"
+        ],
+        "dimensions_mm": {
+          "width": 304.1,
+          "depth": 212.4,
+          "height": 15.6
+        },
+        "display_aspect": "2560x1600",
+        "ports_note": "Two Thunderbolt / USB 4 ports; Touch Bar."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#7D7E80",
+          "body_hex_dark": "#5A5B5C",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-spacegray-select-202402 / mba15-spacegray-select-202306 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MNEH3": "Space Gray",
+        "MNEJ3": "Space Gray",
+        "MNEP3": "Silver",
+        "MNEQ3": "Silver"
+      },
+      "part_number_sources": {
+        "MNEH3": [
+          "everymac"
+        ],
+        "MNEJ3": [
+          "everymac"
+        ],
+        "MNEP3": [
+          "everymac"
+        ],
+        "MNEQ3": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111869"
+      ]
+    },
+    {
+      "id": "mbp14-2023",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, 2023)",
+      "year": 2023,
+      "chips": [
+        "M2 Pro",
+        "M2 Max"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac14,5",
+        "Mac14,9"
+      ],
+      "identifier_notes": {
+        "Mac14,9": "M2 Pro",
+        "Mac14,5": "M2 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#868789",
+          "body_hex_dark": "#606163",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spacegray-select-202301 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MPHE3": "Space Gray",
+        "MPHF3": "Space Gray",
+        "MPHG3": "Space Gray",
+        "MPHH3": "Silver",
+        "MPHJ3": "Silver",
+        "MPHK3": "Silver"
+      },
+      "part_number_sources": {
+        "MPHE3": [
+          "everymac"
+        ],
+        "MPHF3": [
+          "everymac"
+        ],
+        "MPHG3": [
+          "everymac"
+        ],
+        "MPHH3": [
+          "everymac"
+        ],
+        "MPHJ3": [
+          "everymac"
+        ],
+        "MPHK3": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111340"
+      ]
+    },
+    {
+      "id": "mbp16-2023",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (16-inch, 2023)",
+      "year": 2023,
+      "chips": [
+        "M2 Pro",
+        "M2 Max"
+      ],
+      "screen_in": 16.2,
+      "size_label": "16-inch",
+      "model_identifiers": [
+        "Mac14,6",
+        "Mac14,10"
+      ],
+      "identifier_notes": {
+        "Mac14,10": "M2 Pro",
+        "Mac14,6": "M2 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 355.7,
+          "depth": 248.1,
+          "height": 16.8
+        },
+        "display_aspect": "3456x2234",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Space Gray",
+          "body_hex": "#868789",
+          "body_hex_dark": "#606163",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spacegray-select-202301 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        }
+      ],
+      "default_color": "Silver",
+      "part_numbers": {
+        "MNW83": "Space Gray",
+        "MNW93": "Space Gray",
+        "MNWA3": "Space Gray",
+        "MNWC3": "Silver",
+        "MNWD3": "Silver",
+        "MNWE3": "Silver"
+      },
+      "part_number_sources": {
+        "MNW83": [
+          "everymac"
+        ],
+        "MNW93": [
+          "everymac"
+        ],
+        "MNWA3": [
+          "everymac"
+        ],
+        "MNWC3": [
+          "everymac"
+        ],
+        "MNWD3": [
+          "everymac"
+        ],
+        "MNWE3": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MNWF3",
+        "MNWG3",
+        "MNWJ3",
+        "MNWK3"
+      ],
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MNWA3, MNWE3"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/111838"
+      ]
+    },
+    {
+      "id": "mbp14-m3",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, M3, Nov 2023)",
+      "year": 2023,
+      "chips": [
+        "M3"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac15,3"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, two Thunderbolt / USB 4 ports (left side only), HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Space Gray",
+          "body_hex": "#868789",
+          "body_hex_dark": "#606163",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spacegray-select-202301 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed). Apple's 2018-2021 swatches render Space Gray much lighter (#ABAEB1-#B1B4B6); the newer swatch value is used because it is closer to product photos."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Gray",
+      "part_numbers": {
+        "MR7J3": "Silver",
+        "MR7K3": "Silver",
+        "MTL73": "Space Gray",
+        "MTL83": "Space Gray",
+        "MXE03": "Space Gray",
+        "MXE13": "Silver"
+      },
+      "part_number_sources": {
+        "MR7J3": [
+          "everymac"
+        ],
+        "MR7K3": [
+          "everymac"
+        ],
+        "MTL73": [
+          "everymac"
+        ],
+        "MTL83": [
+          "everymac"
+        ],
+        "MXE03": [
+          "everymac"
+        ],
+        "MXE13": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MRX23",
+        "MTLC3"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/117735"
+      ]
+    },
+    {
+      "id": "mbp14-m3pro",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, M3 Pro or M3 Max, Nov 2023)",
+      "year": 2023,
+      "chips": [
+        "M3 Pro",
+        "M3 Max"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac15,6",
+        "Mac15,8",
+        "Mac15,10"
+      ],
+      "identifier_notes": {
+        "Mac15,6": "M3 Pro",
+        "Mac15,8": "M3 Max (16-core CPU)",
+        "Mac15,10": "M3 Max (14-core CPU)"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MRX33": "Space Black",
+        "MRX43": "Space Black",
+        "MRX53": "Space Black",
+        "MRX63": "Silver",
+        "MRX73": "Silver",
+        "MRX83": "Silver"
+      },
+      "part_number_sources": {
+        "MRX33": [
+          "everymac"
+        ],
+        "MRX43": [
+          "everymac"
+        ],
+        "MRX53": [
+          "everymac"
+        ],
+        "MRX63": [
+          "everymac"
+        ],
+        "MRX73": [
+          "everymac"
+        ],
+        "MRX83": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "FRX33",
+        "FRX43",
+        "FRX54",
+        "FRX63",
+        "FRX73",
+        "FRX83"
+      ],
+      "apple_list_notes": [
+        "Apple lists FRX54 among FRX33-FRX83; the pattern suggests FRX53, not confirmed.",
+        "Apple also lists F-prefix (refurbished) numbers FRX33, FRX43, FRX54, FRX63, FRX73, FRX83; their colours are not mapped because no source states them."
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/117736"
+      ]
+    },
+    {
+      "id": "mbp16-m3pro",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (16-inch, Nov 2023)",
+      "year": 2023,
+      "chips": [
+        "M3 Pro",
+        "M3 Max"
+      ],
+      "screen_in": 16.2,
+      "size_label": "16-inch",
+      "model_identifiers": [
+        "Mac15,7",
+        "Mac15,9",
+        "Mac15,11"
+      ],
+      "identifier_notes": {
+        "Mac15,7": "M3 Pro",
+        "Mac15,9": "M3 Max (16-core CPU)",
+        "Mac15,11": "M3 Max (14-core CPU)"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 355.7,
+          "depth": 248.1,
+          "height": 16.8
+        },
+        "display_aspect": "3456x2234",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MRW13": "Space Black",
+        "MRW23": "Space Black",
+        "MRW33": "Space Black",
+        "MRW43": "Silver",
+        "MRW63": "Silver",
+        "MRW73": "Silver",
+        "MUW63": "Space Black",
+        "MUW73": "Silver"
+      },
+      "part_number_sources": {
+        "MRW13": [
+          "everymac"
+        ],
+        "MRW23": [
+          "everymac"
+        ],
+        "MRW33": [
+          "everymac"
+        ],
+        "MRW43": [
+          "everymac"
+        ],
+        "MRW63": [
+          "everymac"
+        ],
+        "MRW73": [
+          "everymac"
+        ],
+        "MUW63": [
+          "everymac"
+        ],
+        "MUW73": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "FRW13",
+        "FRW23",
+        "FRW33",
+        "FRW43",
+        "FRW63",
+        "FRW73",
+        "FUW63",
+        "FUW73"
+      ],
+      "apple_list_notes": [
+        "Apple also lists F-prefix (refurbished) numbers FRW13, FRW23, FRW33, FRW43, FRW63, FRW73, FUW63, FUW73; their colours are not mapped because no source states them.",
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MUW63, MUW73"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/117737"
+      ]
+    },
+    {
+      "id": "mbp14-m4",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, M4, 2024)",
+      "year": 2024,
+      "chips": [
+        "M4"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac16,1"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MCX04": "Space Black",
+        "MCX14": "Silver",
+        "MW2U3": "Space Black",
+        "MW2V3": "Space Black",
+        "MW2W3": "Silver",
+        "MW2X3": "Silver"
+      },
+      "part_number_sources": {
+        "MCX04": [
+          "everymac"
+        ],
+        "MCX14": [
+          "everymac"
+        ],
+        "MW2U3": [
+          "everymac"
+        ],
+        "MW2V3": [
+          "everymac"
+        ],
+        "MW2W3": [
+          "everymac"
+        ],
+        "MW2X3": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MXCM3",
+        "MXCN3"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/121552"
+      ]
+    },
+    {
+      "id": "mbp14-m4pro",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, M4 Pro or M4 Max, 2024)",
+      "year": 2024,
+      "chips": [
+        "M4 Pro",
+        "M4 Max"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac16,6",
+        "Mac16,8"
+      ],
+      "identifier_notes": {
+        "Mac16,8": "M4 Pro",
+        "Mac16,6": "M4 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 5 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MX2E3": "Silver",
+        "MX2F3": "Silver",
+        "MX2G3": "Silver",
+        "MX2H3": "Space Black",
+        "MX2J3": "Space Black",
+        "MX2K3": "Space Black"
+      },
+      "part_number_sources": {
+        "MX2E3": [
+          "everymac"
+        ],
+        "MX2F3": [
+          "everymac"
+        ],
+        "MX2G3": [
+          "everymac"
+        ],
+        "MX2H3": [
+          "everymac"
+        ],
+        "MX2J3": [
+          "everymac"
+        ],
+        "MX2K3": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MXE63"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/121553"
+      ]
+    },
+    {
+      "id": "mbp16-m4pro",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (16-inch, 2024)",
+      "year": 2024,
+      "chips": [
+        "M4 Pro",
+        "M4 Max"
+      ],
+      "screen_in": 16.2,
+      "size_label": "16-inch",
+      "model_identifiers": [
+        "Mac16,7",
+        "Mac16,5"
+      ],
+      "identifier_notes": {
+        "Mac16,7": "M4 Pro",
+        "Mac16,5": "M4 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 355.7,
+          "depth": 248.1,
+          "height": 16.8
+        },
+        "display_aspect": "3456x2234",
+        "ports_note": "MagSafe 3, three Thunderbolt 5 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MX2T3": "Silver",
+        "MX2U3": "Silver",
+        "MX2W3": "Silver",
+        "MX2X3": "Space Black",
+        "MX2Y3": "Space Black",
+        "MX313": "Space Black"
+      },
+      "part_number_sources": {
+        "MX2T3": [
+          "everymac"
+        ],
+        "MX2U3": [
+          "everymac"
+        ],
+        "MX2W3": [
+          "everymac"
+        ],
+        "MX2X3": [
+          "everymac"
+        ],
+        "MX2Y3": [
+          "everymac"
+        ],
+        "MX313": [
+          "everymac"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MX2V3",
+        "MX303"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/121554"
+      ]
+    },
+    {
+      "id": "mbp14-m5",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, M5)",
+      "year": 2025,
+      "chips": [
+        "M5"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac17,2"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MDE04": "Space Black",
+        "MDE14": "Space Black",
+        "MDE34": "Space Black",
+        "MDE44": "Silver",
+        "MDE54": "Silver",
+        "MDE64": "Silver",
+        "MJ3D4": "Space Black",
+        "MJ3E4": "Silver"
+      },
+      "part_number_sources": {
+        "MDE04": [
+          "everymac"
+        ],
+        "MDE14": [
+          "everymac"
+        ],
+        "MDE34": [
+          "everymac"
+        ],
+        "MDE44": [
+          "everymac"
+        ],
+        "MDE54": [
+          "everymac"
+        ],
+        "MDE64": [
+          "everymac"
+        ],
+        "MJ3D4": [
+          "everymac"
+        ],
+        "MJ3E4": [
+          "everymac"
+        ]
+      },
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MJ3D4, MJ3E4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/125405"
+      ]
+    },
+    {
+      "id": "mbp14-m5pro",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, M5 Pro or M5 Max)",
+      "year": 2026,
+      "chips": [
+        "M5 Pro",
+        "M5 Max"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac17,7",
+        "Mac17,9"
+      ],
+      "identifier_notes": {
+        "Mac17,9": "M5 Pro",
+        "Mac17,7": "M5 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 5 ports, HDMI, SDXC, headphone.",
+        "unverified": true,
+        "unverified_note": "notch assumed: same native resolution and the same \"rounded corners at the top\" footnote as the notched predecessors; not confirmed from photos. Port set is from Apple tech specs; left/right placement is assumed from the predecessor chassis and not confirmed from photos of this model."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MGDN4": "Silver",
+        "MGDP4": "Silver",
+        "MGDQ4": "Silver",
+        "MGDR4": "Space Black",
+        "MGDT4": "Space Black",
+        "MGDU4": "Space Black",
+        "MJLV4": "Silver",
+        "MJLW4": "Space Black"
+      },
+      "part_number_sources": {
+        "MGDN4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGDP4": [
+          "everymac"
+        ],
+        "MGDQ4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGDR4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGDT4": [
+          "everymac"
+        ],
+        "MGDU4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MJLV4": [
+          "everymac"
+        ],
+        "MJLW4": [
+          "everymac"
+        ]
+      },
+      "apple_list_notes": [
+        "Apple lists \"MGDQxx/A\" (malformed, prefix not 5 characters)",
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MGDQ4, MJLV4, MJLW4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/126318"
+      ]
+    },
+    {
+      "id": "mbp16-m5pro",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (16-inch, M5 Pro or M5 Max)",
+      "year": 2026,
+      "chips": [
+        "M5 Pro",
+        "M5 Max"
+      ],
+      "screen_in": 16.2,
+      "size_label": "16-inch",
+      "model_identifiers": [
+        "Mac17,6",
+        "Mac17,8"
+      ],
+      "identifier_notes": {
+        "Mac17,8": "M5 Pro",
+        "Mac17,6": "M5 Max"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 355.7,
+          "depth": 248.1,
+          "height": 16.8
+        },
+        "display_aspect": "3456x2234",
+        "ports_note": "MagSafe 3, three Thunderbolt 5 ports, HDMI, SDXC, headphone.",
+        "unverified": true,
+        "unverified_note": "notch assumed: same native resolution and the same \"rounded corners at the top\" footnote as the notched predecessors; not confirmed from photos. Port set is from Apple tech specs; left/right placement is assumed from the predecessor chassis and not confirmed from photos of this model."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MGE44": "Silver",
+        "MGE64": "Silver",
+        "MGE74": "Silver",
+        "MGE94": "Silver",
+        "MGEA4": "Space Black",
+        "MGEC4": "Space Black",
+        "MGED4": "Space Black",
+        "MGEE4": "Space Black"
+      },
+      "part_number_sources": {
+        "MGE44": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGE64": [
+          "everymac"
+        ],
+        "MGE74": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGE94": [
+          "everymac"
+        ],
+        "MGEA4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGEC4": [
+          "everymac"
+        ],
+        "MGED4": [
+          "apple-store",
+          "everymac"
+        ],
+        "MGEE4": [
+          "everymac"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/126319"
+      ]
+    },
+    {
+      "id": "mbp14-proled",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch PROLED XDR, M5 Pro or M5 Max)",
+      "year": 2026,
+      "chips": [
+        "M5 Pro",
+        "M5 Max"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac17,11",
+        "Mac17,13"
+      ],
+      "identifier_notes": {
+        "Mac17,11": "M5 Pro or M5 Max (split not confirmed)",
+        "Mac17,13": "M5 Pro or M5 Max (split not confirmed)"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dynamic_island": true,
+        "touch_screen": true,
+        "dimensions_mm": {
+          "width": 310.8,
+          "depth": 216.3,
+          "height": 15.0
+        },
+        "display_aspect": "3024x1986",
+        "ports_note": "MagSafe 3, three Thunderbolt 5 ports, HDMI, SDXC, headphone. Tandem OLED touch display with Dynamic Island (Apple tech specs).",
+        "unverified": true,
+        "unverified_note": "New thinner chassis. Port set is from Apple tech specs; left/right placement is assumed from the predecessor chassis and not confirmed from photos of this model. Dynamic Island shape and position not confirmed from photos."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MJ2G4": "Silver",
+        "MJ2J4": "Silver",
+        "MJ2K4": "Space Black",
+        "MJ2M4": "Space Black",
+        "MJ9X4": "Space Black",
+        "MMF54": "Silver",
+        "MMF64": "Space Black"
+      },
+      "part_number_sources": {
+        "MJ2G4": [
+          "apple-store"
+        ],
+        "MJ2J4": [
+          "apple-store"
+        ],
+        "MJ2K4": [
+          "apple-store"
+        ],
+        "MJ2M4": [
+          "apple-store"
+        ],
+        "MJ9X4": [
+          "apple-store"
+        ],
+        "MMF54": [
+          "apple-store"
+        ],
+        "MMF64": [
+          "apple-store"
+        ]
+      },
+      "part_numbers_color_unknown": [
+        "MJ2N4",
+        "MJ2Q4",
+        "MJ2T4",
+        "MJ2V4"
+      ],
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MJ9X4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/148301"
+      ]
+    },
+    {
+      "id": "mbp16-proled",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (16-inch PROLED XDR, M5 Pro or M5 Max)",
+      "year": 2026,
+      "chips": [
+        "M5 Pro",
+        "M5 Max"
+      ],
+      "screen_in": 16.3,
+      "size_label": "16-inch",
+      "model_identifiers": [
+        "Mac17,10",
+        "Mac17,12"
+      ],
+      "identifier_notes": {
+        "Mac17,10": "M5 Pro or M5 Max (split not confirmed)",
+        "Mac17,12": "M5 Pro or M5 Max (split not confirmed)"
+      },
+      "design": {
+        "lid": "flat",
+        "notch": false,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dynamic_island": true,
+        "touch_screen": true,
+        "dimensions_mm": {
+          "width": 355.5,
+          "depth": 244.2,
+          "height": 16.0
+        },
+        "display_aspect": "3472x2266",
+        "ports_note": "MagSafe 3, three Thunderbolt 5 ports, HDMI, SDXC, headphone. Tandem OLED touch display with Dynamic Island (Apple tech specs).",
+        "unverified": true,
+        "unverified_note": "New thinner chassis. Port set is from Apple tech specs; left/right placement is assumed from the predecessor chassis and not confirmed from photos of this model. Dynamic Island shape and position not confirmed from photos."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MJ2W4": "Silver",
+        "MJ2X4": "Silver",
+        "MJ2Y4": "Silver",
+        "MJ304": "Space Black",
+        "MJ314": "Space Black",
+        "MJ334": "Space Black",
+        "MMF94": "Silver",
+        "MMFA4": "Space Black"
+      },
+      "part_number_sources": {
+        "MJ2W4": [
+          "apple-store"
+        ],
+        "MJ2X4": [
+          "apple-store"
+        ],
+        "MJ2Y4": [
+          "apple-store"
+        ],
+        "MJ304": [
+          "apple-store"
+        ],
+        "MJ314": [
+          "apple-store"
+        ],
+        "MJ334": [
+          "apple-store"
+        ],
+        "MMF94": [
+          "apple-store"
+        ],
+        "MMFA4": [
+          "apple-store"
+        ]
+      },
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/148302"
+      ]
+    },
+    {
+      "id": "mbp14-m6",
+      "family": "pro",
+      "marketing_name": "MacBook Pro (14-inch, M6)",
+      "year": 2026,
+      "chips": [
+        "M6"
+      ],
+      "screen_in": 14.2,
+      "size_label": "14-inch",
+      "model_identifiers": [
+        "Mac18,1"
+      ],
+      "design": {
+        "lid": "flat",
+        "notch": true,
+        "touch_bar": false,
+        "function_row": "full-height",
+        "corner_radius_hint": 11,
+        "bezel": "thin",
+        "ports_left": [
+          "magsafe3",
+          "thunderbolt",
+          "thunderbolt",
+          "headphone"
+        ],
+        "ports_right": [
+          "hdmi",
+          "thunderbolt",
+          "sdxc"
+        ],
+        "dimensions_mm": {
+          "width": 312.6,
+          "depth": 221.2,
+          "height": 15.5
+        },
+        "display_aspect": "3024x1964",
+        "ports_note": "MagSafe 3, three Thunderbolt 4 ports, HDMI, SDXC, headphone.",
+        "unverified": true,
+        "unverified_note": "notch assumed: same native resolution and the same \"rounded corners at the top\" footnote as the notched predecessors; not confirmed from photos. Port set is from Apple tech specs; left/right placement is assumed from the predecessor chassis and not confirmed from photos of this model."
+      },
+      "colors": [
+        {
+          "name": "Space Black",
+          "body_hex": "#383738",
+          "body_hex_dark": "#282828",
+          "keyboard_hex": "#141416",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mbp14-spaceblack-cto-hero-202410 swatch (median); body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        },
+        {
+          "name": "Silver",
+          "body_hex": "#E3E4E5",
+          "body_hex_dark": "#A3A4A5",
+          "keyboard_hex": "#1D1D1F",
+          "notes": "Approximate; Apple publishes no hex values. body_hex sampled from Apple Store mba13-silver-select-202503 / mbp16-silver-cto-hero-202410 swatch; body_hex_dark = body_hex x 0.72 for edges/gradients; keyboard_hex is the black keycap colour (eyeballed)."
+        }
+      ],
+      "default_color": "Space Black",
+      "part_numbers": {
+        "MHWT4": "Space Black",
+        "MHWU4": "Space Black",
+        "MHWV4": "Space Black",
+        "MHWW4": "Silver",
+        "MHWX4": "Silver",
+        "MHWY4": "Silver",
+        "MJ2C4": "Space Black"
+      },
+      "part_number_sources": {
+        "MHWT4": [
+          "apple-store"
+        ],
+        "MHWU4": [
+          "apple-store"
+        ],
+        "MHWV4": [
+          "apple-store"
+        ],
+        "MHWW4": [
+          "apple-store"
+        ],
+        "MHWX4": [
+          "apple-store"
+        ],
+        "MHWY4": [
+          "apple-store"
+        ],
+        "MJ2C4": [
+          "apple-store"
+        ]
+      },
+      "apple_list_notes": [
+        "Mapped prefixes not on Apple's identify page (confirmed by everymac or the Apple Store): MJ2C4"
+      ],
+      "sources": [
+        "https://support.apple.com/en-us/108052",
+        "https://support.apple.com/en-us/148300"
+      ]
+    }
+  ]
+}

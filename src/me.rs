@@ -43,6 +43,8 @@ pub struct Config {
     /// The command the receiver runs to set things up; `{dir}` is the transfer folder with AGENTS.md and GOAL.md.
     pub agent: String,
     pub registered: bool,
+    /// "en" (the default) or "tr".
+    pub lang: String,
 }
 
 impl Default for Config {
@@ -55,6 +57,7 @@ impl Default for Config {
             bus: String::new(),
             agent: crate::setup::AGENTS[0].1.into(),
             registered: false,
+            lang: "en".into(),
         }
     }
 }

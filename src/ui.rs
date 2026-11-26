@@ -33,10 +33,68 @@ const DIM: Color = Color { r: 0.02416, g: 0.03820, b: 0.06125, a: 1.0 }; // #2b3
 const OK: Color = Color { r: 0.02843, g: 0.52100, b: 0.16513, a: 1.0 }; // #2fbf71
 const ERR: Color = Color { r: 1.00000, g: 0.08866, b: 0.13843, a: 1.0 }; // #ff5468
 
-/// Where the two laptops' hinges are, and how wide a 16-inch lid is drawn.
-const LEFT: (f32, f32) = (330.0, 322.0);
-const RIGHT: (f32, f32) = (1000.0, 352.0);
-const LAPTOP_W: f32 = 340.0;
+/// Where everything sits: assets/layout.json, which tools/layout-editor.html edits. MACYSYNC_LAYOUT points at
+/// another copy (the editor's preview renders with it).
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct Layout {
+    pub outline: Vec<[f32; 2]>,
+    pub elements: Elements,
+    pub conduit: [[f32; 2]; 4],
+    pub flow: FlowGuide,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug)]
+pub struct Rect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+pub struct Elements {
+    pub title: Rect,
+    /// A laptop's box is its 16-inch size: the lid is 0.655 of the width tall, the hinge sits there.
+    pub laptop_left: Rect,
+    pub laptop_right: Rect,
+    pub left_panel: Rect,
+    pub right_panel: Rect,
+    pub controls: Rect,
+    pub dialog: Rect,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug)]
+pub struct Band {
+    pub y: f32,
+    pub spread: f32,
+}
+
+/// The background lines: where they fan out over each lobe and squeeze through the bridge, and the x ranges
+/// where they bend from one band to the next.
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug)]
+pub struct FlowGuide {
+    pub left: Band,
+    pub bridge: Band,
+    pub right: Band,
+    pub into_bridge: [f32; 2],
+    pub into_right: [f32; 2],
+}
+
+pub fn layout() -> &'static Layout {
+    static L: std::sync::OnceLock<Layout> = std::sync::OnceLock::new();
+    L.get_or_init(|| {
+        let custom = std::env::var_os("MACYSYNC_LAYOUT").and_then(|p| std::fs::read_to_string(p).ok());
+        let text = custom.as_deref().unwrap_or(include_str!("../assets/layout.json"));
+        serde_json::from_str(text).unwrap_or_else(|e| panic!("layout.json: {e}"))
+    })
+}
+
+const LID: f32 = 0.655;
+
+/// (hinge centre x, hinge y, 16-inch width) of a laptop box.
+fn hinge(r: Rect) -> (f32, f32, f32) {
+    (r.x + r.w / 2.0, r.y + r.w * LID, r.w)
+}
 const POLL_S: f32 = 5.0;
 
 pub fn is_tooling_arg(a: &str) -> bool {
@@ -127,18 +185,10 @@ impl Flow {
     }
 }
 
-fn system_turkish() -> bool {
-    let env = ["LC_ALL", "LC_MESSAGES", "LANG"].iter().filter_map(|k| std::env::var(k).ok()).find(|v| !v.is_empty());
-    if let Some(v) = env {
-        return v.starts_with("tr");
-    }
-    std::process::Command::new("defaults").args(["read", "-g", "AppleLocale"]).output().map(|o| String::from_utf8_lossy(&o.stdout).starts_with("tr")).unwrap_or(false)
-}
-
 fn init() -> S {
     let cfg = Config::load();
     S {
-        tr: system_turkish(),
+        tr: cfg.lang == "tr",
         hw: Hardware::default(),
         now: 0.0,
         tab: if cfg.registered { 2 } else { 1 },
@@ -444,19 +494,14 @@ fn caps(s: impl Into<String>, c: Color) -> El {
     text(s.into()).font(style(11.0, 700.0).mono().tracking(1.4)).color(c)
 }
 
-/// The outline through these points, smoothed (Catmull-Rom): a tall lobe on the left for this Mac, a
-/// bridge, and a lower lobe on the right for the other Mac.
-const OUTLINE: [[f32; 2]; 20] = [
-    [72.0, 64.0], [330.0, 34.0], [566.0, 58.0], [646.0, 150.0], [724.0, 176.0], [826.0, 116.0], [1064.0, 98.0], [1218.0, 150.0],
-    [1242.0, 380.0], [1210.0, 598.0], [1004.0, 648.0], [804.0, 612.0], [724.0, 470.0], [652.0, 446.0], [618.0, 566.0],
-    [602.0, 728.0], [330.0, 764.0], [70.0, 740.0], [40.0, 520.0], [38.0, 236.0],
-];
-
+/// The outline through the layout's points, smoothed (Catmull-Rom; the editor draws it the same way): a tall
+/// lobe on the left for this Mac, a bridge, and a lower lobe on the right for the other Mac.
 fn segments() -> Vec<([f32; 2], [f32; 2], [f32; 2], [f32; 2])> {
-    let n = OUTLINE.len();
+    let o = &layout().outline;
+    let n = o.len();
     (0..n)
         .map(|i| {
-            let (p0, p1, p2, p3) = (OUTLINE[(i + n - 1) % n], OUTLINE[i], OUTLINE[(i + 1) % n], OUTLINE[(i + 2) % n]);
+            let (p0, p1, p2, p3) = (o[(i + n - 1) % n], o[i], o[(i + 1) % n], o[(i + 2) % n]);
             let c1 = [p1[0] + (p2[0] - p0[0]) / 6.0, p1[1] + (p2[1] - p0[1]) / 6.0];
             let c2 = [p2[0] - (p3[0] - p1[0]) / 6.0, p2[1] - (p3[1] - p1[1]) / 6.0];
             (p1, c1, c2, p2)
@@ -465,7 +510,7 @@ fn segments() -> Vec<([f32; 2], [f32; 2], [f32; 2], [f32; 2])> {
 }
 
 fn body_path() -> Path {
-    segments().iter().fold(Path::new().move_to(OUTLINE[0]), |p, (_, a, b, c)| p.cubic_to(*a, *b, *c)).close()
+    segments().iter().fold(Path::new().move_to(layout().outline[0]), |p, (_, a, b, c)| p.cubic_to(*a, *b, *c)).close()
 }
 
 fn bezier((p0, a, b, c): ([f32; 2], [f32; 2], [f32; 2], [f32; 2]), t: f32) -> [f32; 2] {
@@ -519,7 +564,8 @@ fn flow_lines() -> &'static [FlowLine] {
             .map(|i| {
                 let o = -1.0 + 2.0 * i as f32 / (LINES - 1) as f32;
                 // They fan out over each lobe and squeeze through the bridge.
-                let (yl, yb, yr) = (300.0 + o * 250.0, 312.0 + o * 118.0, 372.0 + o * 230.0);
+                let f = layout().flow;
+                let (yl, yb, yr) = (f.left.y + o * f.left.spread, f.bridge.y + o * f.bridge.spread, f.right.y + o * f.right.spread);
                 let wobble = 4.0 + 6.0 * hash(i as u32 * 7 + 1);
                 let shift = hash(i as u32 * 13 + 5) * std::f32::consts::TAU;
                 let pts: Vec<[f32; 2]> = (0..SAMPLES)
@@ -529,7 +575,7 @@ fn flow_lines() -> &'static [FlowLine] {
                             let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
                             t * t * (3.0 - 2.0 * t)
                         };
-                        let y = yl + (yb - yl) * sm(380.0, 640.0) + (yr - yb) * sm(720.0, 960.0) + wobble * (x / 160.0 + shift).sin();
+                        let y = yl + (yb - yl) * sm(f.into_bridge[0], f.into_bridge[1]) + (yr - yb) * sm(f.into_right[0], f.into_right[1]) + wobble * (x / 160.0 + shift).sin();
                         [x, y]
                     })
                     .collect();
@@ -593,8 +639,8 @@ fn backdrop(s: &S) -> Vec<El> {
 /// The conduit between the laptops: two steel rails, and chevrons that run from the sender to the receiver.
 fn conduit(s: &S) -> Vec<El> {
     let env = s.flow.env();
-    let (a, b) = ([498.0, 258.0], [836.0, 292.0]);
-    let rail = |dy: f32| Path::new().move_to([a[0], a[1] + dy]).cubic_to([620.0, a[1] + dy + 4.0], [710.0, b[1] + dy - 6.0], [b[0], b[1] + dy]);
+    let [a, c1, c2, b] = layout().conduit;
+    let rail = |dy: f32| Path::new().move_to([a[0], a[1] + dy]).cubic_to([c1[0], c1[1] + dy], [c2[0], c2[1] + dy], [b[0], b[1] + dy]);
     let mut shape = Shape::new();
     for dy in [-16.0, 16.0] {
         shape = shape.stroke_path(&rail(dy), 2.0, LineCap::Round, Color { a: 0.85, ..STEEL });
@@ -603,12 +649,11 @@ fn conduit(s: &S) -> Vec<El> {
         full(Shape::new().stroke_path(&rail(0.0), 30.0, LineCap::Round, Color { a: 0.55, ..FIELD })).key("conduit-bed"),
         full(shape).key("conduit-rails"),
     ];
-    let mid = rail(0.0);
     let n = 7;
     let mut chev = Shape::new();
     for k in 0..n {
         let u = ((k as f32 + s.flow.pos * 3.0 * s.flow.dir.signum() * s.flow.dir) / n as f32).rem_euclid(1.0);
-        let seg = (a, [620.0, a[1] + 4.0], [710.0, b[1] - 6.0], b);
+        let seg = (a, c1, c2, b);
         let p = bezier(seg, u);
         let q = bezier(seg, (u + 0.01).min(1.0));
         let d = if s.flow.dir >= 0.0 { 1.0 } else { -1.0 };
@@ -620,13 +665,13 @@ fn conduit(s: &S) -> Vec<El> {
     }
     out.push(full(chev.clone()).blur(4.0).key("chev-glow"));
     out.push(full(chev).key("chev"));
-    let _ = mid;
     out
 }
 
-fn device_on_screen(s: &S, key: &str, d: Option<&Device>, look: &Look, (cx, hy): (f32, f32), role: String, this: bool) -> Vec<El> {
+fn device_on_screen(s: &S, key: &str, d: Option<&Device>, look: &Look, place: Rect, role: String, this: bool) -> Vec<El> {
     let Some((m, c)) = look::resolve(look) else { return vec![] };
-    let drawn = look::laptop(key, m, c, cx, hy, LAPTOP_W);
+    let (cx, hy, width) = hinge(place);
+    let drawn = look::laptop(key, m, c, cx, hy, width);
     let [x, y, w, h] = drawn.screen;
     let mut out = drawn.layers;
     let name = d.map(|d| d.name.clone()).unwrap_or_else(|| s.t("No Mac picked", "Mac seçilmedi"));
@@ -800,7 +845,8 @@ fn left_panel(s: &S, k: &Kit) -> El {
         _ => tab_soon(s, s.t("Files move Mac to Mac, encrypted; then the agent sets everything up.",
             "Dosyalar şifreli olarak Mac'ten Mac'e gider, sonra agent her şeyi kurar.")),
     };
-    col().absolute(78.0, 432.0).w(512.0).gap(8.0).child(tabs).child(card(262.0).child(content))
+    let r = layout().elements.left_panel;
+    col().absolute(r.x, r.y).w(r.w).gap(8.0).child(tabs).child(card(r.h - 36.0).child(content))
 }
 
 fn fmt_bytes(b: u64) -> String {
@@ -809,14 +855,15 @@ fn fmt_bytes(b: u64) -> String {
 }
 
 fn right_panel(s: &S) -> El {
-    let mut c = card(128.0);
+    let r = layout().elements.right_panel;
+    let mut c = card(r.h);
     match &s.session {
         Some(x) => {
             let pct = if x.total > 0 { x.bytes as f32 / x.total as f32 } else { 0.0 };
             c = c.child(row().w_full().center_y().child(caps(s.t("TRANSFER", "AKTARIM"), BLUE2)).child(spacer()).child(mono(x.state.clone(), 10.5, ICE)))
                 .child(row().w_full().child(mono(format!("{} / {}", fmt_bytes(x.bytes), fmt_bytes(x.total)), 12.0, INK)).child(spacer())
                     .child(mono(format!("{}/s", fmt_bytes(x.avg_bytes_per_s)), 12.0, SOFT)))
-                .child(el().w_full().h(6.0).radius(3.0).fill(FIELD).child(el().h(6.0).w(330.0 * pct).radius(3.0).linear_gradient(1.57, [(0.0, BLUE), (1.0, ICE)])))
+                .child(el().w_full().h(6.0).radius(3.0).fill(FIELD).child(el().h(6.0).w((r.w - 28.0) * pct).radius(3.0).linear_gradient(1.57, [(0.0, BLUE), (1.0, ICE)])))
                 .child(mono(format!("{} {} · {}", s.t("started", "başladı"), x.started_utc, x.network), 10.0, MUTED));
         }
         None => {
@@ -835,7 +882,8 @@ fn right_panel(s: &S) -> El {
 
 fn sheet(card: El) -> El {
     let dim = Shape::new().fill_path(&body_path(), Color { r: 0.0, g: 0.001, b: 0.002, a: 0.74 });
-    el().absolute(0.0, 0.0).size(W, H).child(full(dim)).child(col().absolute((W - 540.0) / 2.0, 230.0).child(card))
+    let r = layout().elements.dialog;
+    el().absolute(0.0, 0.0).size(W, H).child(full(dim)).child(col().absolute(r.x, r.y).w(r.w).child(card))
 }
 
 fn incoming(s: &S, r: &Request) -> El {
@@ -846,7 +894,7 @@ fn incoming(s: &S, r: &Request) -> El {
         Ask::Receive => (s.t("Send files?", "Dosyaları gönder?"), format!("{who} {}", s.t("wants to take this Mac's files, settings and secrets. You pick what to offer before anything moves.",
             "bu Mac'in dosyalarını, ayarlarını ve gizli bilgilerini almak istiyor. Bir şey taşınmadan önce neyi sunacağını sen seçersin."))),
     };
-    let card = col().w(540.0).fill(Color { r: 0.004, g: 0.007, b: 0.013, a: 1.0 }).border(1.0, BLUE).radius(16.0).padding(22.0).gap(12.0)
+    let card = col().w_full().fill(Color { r: 0.004, g: 0.007, b: 0.013, a: 1.0 }).border(1.0, BLUE).radius(16.0).padding(22.0).gap(12.0)
         .shadow(30.0, 80.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.6 })
         .child(caps(s.t("REQUEST", "İSTEK"), BLUE2))
         .child(label(title, 19.0, 700.0, INK))
@@ -876,6 +924,7 @@ fn overlays(s: &S) -> Vec<El> {
 
 fn view(s: &S, _: &mut Cx<S>) -> El {
     let k = kit();
+    let e = &layout().elements;
     let mut root = el().key("root").size(W, H).children(backdrop(s)).children(conduit(s));
     let me = s.me();
     let peer = s.peer_device();
@@ -883,17 +932,21 @@ fn view(s: &S, _: &mut Cx<S>) -> El {
     let (role_me, role_peer) = if send { (s.t("SENDER", "GÖNDEREN"), s.t("RECEIVER", "ALAN")) } else { (s.t("RECEIVER", "ALAN"), s.t("SENDER", "GÖNDEREN")) };
     let peer_look = peer.map(|d| d.look.clone()).unwrap_or_else(|| Look { model: s.cfg.look.model.clone(), color: String::new() });
     root = root
-        .children(device_on_screen(s, "left", Some(&me), &s.cfg.look, LEFT, role_me, true))
-        .children(device_on_screen(s, "right", peer, &peer_look, RIGHT, role_peer, false).into_iter().map(|e| if peer.is_some() { e } else { e.opacity(0.45) }))
-        .child(row().absolute(84.0, 52.0).gap(10.0).center_y().window_drag()
+        .children(device_on_screen(s, "left", Some(&me), &s.cfg.look, e.laptop_left, role_me, true))
+        .children(device_on_screen(s, "right", peer, &peer_look, e.laptop_right, role_peer, false).into_iter().map(|e| if peer.is_some() { e } else { e.opacity(0.45) }))
+        .child(row().absolute(e.title.x, e.title.y).gap(10.0).center_y().window_drag()
             .child(row().child(label("Macy", 26.0, 800.0, INK)).child(label("~", 26.0, 800.0, BLUE2)).child(label("Sync", 26.0, 800.0, SILVER)))
             .child(mono(format!("MCYSY · v{}", env!("CARGO_PKG_VERSION")), 10.5, MUTED)))
-        .child(row().absolute(1012.0, 588.0).gap(6.0)
-            .child(button(if s.tr { "EN" } else { "TR" }, false).key("lang").on_press(|s: &mut S| s.tr = !s.tr))
+        .child(row().absolute(e.controls.x, e.controls.y).gap(6.0)
+            .child(button(if s.tr { "EN" } else { "TR" }, false).key("lang").help(s.t("Türkçe", "English")).on_press(|s: &mut S| {
+                s.tr = !s.tr;
+                s.cfg.lang = if s.tr { "tr".into() } else { "en".into() };
+                s.cfg.save();
+            }))
             .child(button("▁", false).key("min").on_press_tx(|_: &mut S, tx: &mut Tx| tx.minimize()))
             .child(button("✕", false).key("quit").on_press_tx(|_: &mut S, tx: &mut Tx| tx.quit())))
         .child(left_panel(s, &k))
-        .child(col().absolute(830.0, 446.0).w(352.0).child(right_panel(s)));
+        .child(col().absolute(e.right_panel.x, e.right_panel.y).w(e.right_panel.w).child(right_panel(s)));
     if let Some((r, _)) = &s.incoming {
         root = root.child(incoming(s, r));
     }
