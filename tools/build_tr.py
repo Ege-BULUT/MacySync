@@ -21,7 +21,7 @@ PAGES = {
               "MacySync'in neye ihtiyacı olduğu, ilk açılış, Mac'leri bulma ve eşleme, seçme ve taşıma, kurulum ajanı, güvenlik ve komut satırı."),
     "changelog/": ("Değişiklikler · MacySync", "Her MacySync sürümü ve neyin değiştiği, en yenisi üstte."),
     "download/": ("MacySync'i macOS için indir",
-                  "Apple silicon ve Intel macOS için MacySync: henüz yayınlanmadı; ilk sürüm çıkınca dosyalar bu sayfada."),
+                  "Apple silicon macOS için MacySync 0.1.0: eski Mac için de yeni Mac için de tek uygulama."),
     "wavy/": ("WavySync, MacySync'in ikizi: Wave Terminal'i bilgisayarlar arasında senkronla",
               "WavySync, Wave Terminal'i her bilgisayarda aynı tutar: ayarlar, çalışma alanları, düzenler ve widget'lar, senin GitHub deponla. MacySync'in ikizi."),
 }

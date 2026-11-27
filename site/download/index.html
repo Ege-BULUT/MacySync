@@ -4,20 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Download MacySync for macOS</title>
-<meta name="description" content="MacySync for macOS on Apple silicon and Intel: not released yet; this page gets the files when the first build is out.">
+<meta name="description" content="MacySync 0.1.0 for macOS on Apple silicon: one app for the old Mac and the new one.">
 <link rel="canonical" href="https://macysync.vercel.app/download/">
 <meta name="google-site-verification" content="s66rd8O_x1saL6PLGpSpIPeHmGazHyTo27NTPkK-GJg">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="MacySync">
 <meta property="og:url" content="https://macysync.vercel.app/download/">
 <meta property="og:title" content="Download MacySync for macOS">
-<meta property="og:description" content="MacySync for macOS on Apple silicon and Intel: not released yet; this page gets the files when the first build is out.">
+<meta property="og:description" content="MacySync 0.1.0 for macOS on Apple silicon: one app for the old Mac and the new one.">
 <meta property="og:image" content="https://macysync.vercel.app/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Download MacySync for macOS">
-<meta name="twitter:description" content="MacySync for macOS on Apple silicon and Intel: not released yet; this page gets the files when the first build is out.">
+<meta name="twitter:description" content="MacySync 0.1.0 for macOS on Apple silicon: one app for the old Mac and the new one.">
 <meta name="twitter:image" content="https://macysync.vercel.app/og.png">
 <meta name="theme-color" content="#0a0e14">
 <link rel="alternate" hreflang="en" href="https://macysync.vercel.app/download/">
@@ -55,10 +55,10 @@
 <section>
   <div class="wrap">
     <div class="dl">
-      <div class="os off"><b>macOS</b><span>Apple silicon</span><i data-i="dl.soon">soon</i></div>
-      <div class="os off"><b>macOS</b><span>Intel</span><i data-i="dl.soon2">soon</i></div>
+      <a class="os" href="https://github.com/Ege-BULUT/MacySync/releases/latest/download/MacySync-macos-arm64.zip"><b>macOS</b><span>Apple silicon · macOS 13+</span><i>.zip ↓</i></a>
     </div>
-    <p class="note" data-i="dp.n">MacySync is in early development. Identity, pairing and the encrypted transfer work; picking and the move screen come next. This page gets the files when the first build is out.</p>
+    <p class="note" data-i="dp.n">Unzip it and move MacySync.app to Applications; it carries its own Tailscale for networks that keep Macs apart. Intel Macs have no build yet.</p>
+    <p class="note" data-i="dp.o">MacySync.app is not notarised, so macOS stops the first open: close the warning, then click <b>Open Anyway</b> in System Settings → Privacy &amp; Security. Or run <code>xattr -dr com.apple.quarantine /Applications/MacySync.app</code> once.</p>
     <a class="more" href="../changelog/" data-i="dp.cl">What is done so far →</a>
   </div>
 </section>
