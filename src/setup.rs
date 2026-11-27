@@ -151,6 +151,88 @@ fn relink(path: &Path, old_home: &Path, home: &Path) {
     }
 }
 
+/// Installs what the moved items need before the agent starts: Apple's command line tools, Homebrew (for a
+/// Brewfile; it runs in Terminal, so the installer can ask for the password) and Node (for npm globals and Claude
+/// Code plugin hooks, which run `node`): with brew when it is here, else nodejs.org's LTS into ~/.local/node, no
+/// sudo. Safe to run again: it only installs what is missing, and exits 1 when something is still missing.
+const PREFLIGHT: &str = r#"#!/bin/sh
+# Written by MacySync. Installs what the moved items need before the agent starts; safe to run again.
+NEED_BREW=__BREW__
+NEED_NODE=__NODE__
+BREWS=${PREFLIGHT_BREWS-"/opt/homebrew/bin/brew /usr/local/bin/brew"}
+ok=1
+say() { printf '\033[1m[MacySync]\033[0m %s\n' "$1"; }
+find_brew() { for b in $BREWS; do [ -x "$b" ] && { echo "$b"; return; }; done; }
+add_line() { grep -qsF "$1" "$HOME/.zprofile" || { printf '\n%s\n' "$1" >> "$HOME/.zprofile"; say "Added to ~/.zprofile: $1"; }; }
+# Node's LTS from nodejs.org into ~/.local/node, checked against its SHASUMS256, linked into ~/.local/bin. No sudo.
+node_tarball() {
+  arch=$(uname -m); [ "$arch" = x86_64 ] && arch=x64
+  idx=$(curl -fsSL https://nodejs.org/dist/index.json) || return 1
+  v=$(printf '%s' "$idx" | tr '{' '\n' | grep -v '"lts":false' | grep -m1 '"version"' | sed 's/.*"version":"\([^"]*\)".*/\1/')
+  [ -n "$v" ] || return 1
+  tar="node-$v-darwin-$arch.tar.gz"
+  tmp=$(mktemp -d) || return 1
+  curl -fsSL -o "$tmp/$tar" "https://nodejs.org/dist/$v/$tar" || return 1
+  want=$(curl -fsSL "https://nodejs.org/dist/$v/SHASUMS256.txt" | awk -v f="$tar" '$2 == f { print $1 }')
+  got=$(shasum -a 256 "$tmp/$tar" | awk '{ print $1 }')
+  if [ -z "$want" ] || [ "$want" != "$got" ]; then say "Node's download did not match its checksum."; return 1; fi
+  tar -xzf "$tmp/$tar" -C "$tmp" || return 1
+  rm -rf "${HOME:?}/.local/node" && mkdir -p "$HOME/.local/bin" && mv "$tmp/node-$v-darwin-$arch" "$HOME/.local/node" || return 1
+  for b in node npm npx; do ln -sf "$HOME/.local/node/bin/$b" "$HOME/.local/bin/$b"; done
+  rm -rf "$tmp"
+  add_line 'export PATH="$HOME/.local/bin:$PATH"'
+  export PATH="$HOME/.local/bin:$PATH"
+  say "Node $v is in ~/.local/node."
+}
+if ! xcode-select -p >/dev/null 2>&1; then
+  say "Apple's command line tools are missing. A window opens to install them; run this again when it finishes:"
+  say "  sh '$0'"
+  xcode-select --install
+  exit 1
+fi
+brew_bin=$(find_brew)
+# Homebrew only for a Brewfile: Node alone comes from nodejs.org without a password.
+if [ -z "$brew_bin" ] && [ "$NEED_BREW" = 1 ]; then
+  say "Installing Homebrew (it asks for this Mac's password)."
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || say "Homebrew did not install."
+  brew_bin=$(find_brew)
+fi
+if [ -n "$brew_bin" ]; then
+  eval "$("$brew_bin" shellenv)"
+  # Terminal shells read ~/.zprofile; without this line brew and what it installs are not on PATH.
+  add_line "eval \"\$($brew_bin shellenv)\""
+elif [ "$NEED_BREW" = 1 ]; then
+  ok=0
+fi
+[ -x "$HOME/.local/node/bin/node" ] && export PATH="$HOME/.local/bin:$PATH"
+if [ "$NEED_NODE" = 1 ] && ! command -v node >/dev/null 2>&1; then
+  say "Installing Node."
+  { [ -n "$brew_bin" ] && "$brew_bin" install node; } || node_tarball || { say "Node did not install; get it from nodejs.org."; ok=0; }
+fi
+if [ "$ok" = 1 ]; then say "Tools ready."; else say "Some tools are missing; the agent puts them in TODO-FOR-YOU.md."; exit 1; fi
+"#;
+
+/// What the placed items need on this Mac: (Homebrew, Node).
+fn needs(placed: &[Placed], home: &Path) -> (bool, bool) {
+    let files: Vec<&PathBuf> = placed.iter().flat_map(|p| &p.generated).collect();
+    let named = |n: &str| files.iter().find(|f| f.file_name().is_some_and(|x| x == n));
+    let brewfile = named("Brewfile");
+    let brew_node = brewfile.and_then(|f| std::fs::read_to_string(f).ok()).is_some_and(|b| b.lines().any(|l| l.trim_start().starts_with("brew \"node")));
+    let node = named("npm-globals.txt").is_some() || brew_node || home.join(".claude/plugins").is_dir();
+    (brewfile.is_some(), node)
+}
+
+/// Writes preflight.sh into `dir` when the items need Homebrew or Node; returns whether it did.
+pub fn write_preflight(dir: &Path, placed: &[Placed], home: &Path) -> std::io::Result<bool> {
+    let (brew, node) = needs(placed, home);
+    if !brew && !node {
+        return Ok(false);
+    }
+    let s = PREFLIGHT.replace("__BREW__", if brew { "1" } else { "0" }).replace("__NODE__", if node { "1" } else { "0" });
+    std::fs::write(dir.join("preflight.sh"), s)?;
+    Ok(true)
+}
+
 const AGENTS_MD: &str = "# You are finishing a Mac migration
 
 MacySync moved files from the old Mac to this one and put them in place. GOAL.md lists every item, where it
@@ -174,6 +256,9 @@ pub fn write_brief(dir: &Path, from: &str, old_home: &str, home: &Path, placed: 
     std::fs::create_dir_all(dir)?;
     std::fs::write(dir.join("AGENTS.md"), AGENTS_MD)?;
     let mut g = format!("# GOAL: make this Mac work like {from}\n\n");
+    if write_preflight(dir, placed, home)? {
+        g += "`preflight.sh` in this folder ran before you to install Apple's command line tools, Homebrew and Node where these items need them. If `brew` or `node` is still missing, run `sh preflight.sh` again; what it can't do goes into TODO-FOR-YOU.md.\n\n";
+    }
     let new_home = home.display().to_string();
     if old_home != new_home {
         g += &format!("The old home folder was `{old_home}`, this one is `{new_home}`. Every config that names `{old_home}` must name `{new_home}` instead (`grep -rl '{old_home}' ~/.config ~/.zshrc ~/Library/LaunchAgents ~/.claude*` and the like).\n\n");
@@ -214,7 +299,10 @@ pub fn write_brief(dir: &Path, from: &str, old_home: &str, home: &Path, placed: 
 
 /// Opens Terminal on this Mac with the chosen agent command in the transfer folder.
 pub fn start_agent(command: &str, dir: &Path) -> Result<(), String> {
-    let cmd = command.replace("{dir}", &format!("'{}'", dir.display()));
+    let mut cmd = command.replace("{dir}", &format!("'{}'", dir.display()));
+    if dir.join("preflight.sh").exists() {
+        cmd = format!("/bin/sh '{}'; {cmd}", dir.join("preflight.sh").display());
+    }
     let script = format!("tell application \"Terminal\"\n activate\n do script \"{}\"\nend tell", cmd.replace('\\', "\\\\").replace('"', "\\\""));
     let o = Command::new("osascript").arg("-e").arg(script).output().map_err(|e| e.to_string())?;
     if o.status.success() { Ok(()) } else { Err(String::from_utf8_lossy(&o.stderr).trim().to_string()) }
@@ -284,5 +372,36 @@ mod tests {
         std::fs::write(&f, r#"{"service":"Helium Storage Key","account":"Helium","app":"/Applications/Helium.app","key":""}"#).unwrap();
         assert!(add_key(&f, home).unwrap_err().contains("didn't hand over 'Helium Storage Key'"));
         assert!(!f.exists(), "the file goes either way");
+    }
+
+    #[test]
+    fn preflight_is_written_only_when_tools_are_needed_and_runs_clean() {
+        let base = std::env::temp_dir().join(format!("macysync-preflight-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let (dir, home) = (base.join("transfer"), base.join("home"));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::create_dir_all(&home).unwrap();
+        let plain = vec![Placed { id: "docs".into(), ..Placed::default() }];
+        assert!(!write_preflight(&dir, &plain, &home).unwrap(), "nothing needs a tool");
+        let brewfile = dir.join("Brewfile");
+        std::fs::write(&brewfile, "brew \"git\"\nbrew \"node@22\"\n").unwrap();
+        let tools = vec![Placed { id: "tools/brewfile".into(), generated: vec![brewfile], ..Placed::default() }];
+        assert_eq!(needs(&tools, &home), (true, true), "a Brewfile with node needs both");
+        assert!(write_preflight(&dir, &tools, &home).unwrap());
+        let script = dir.join("preflight.sh");
+        let s = std::fs::read_to_string(&script).unwrap();
+        assert!(s.contains("NEED_BREW=1") && s.contains("NEED_NODE=1"));
+        assert!(Command::new("/bin/sh").arg("-n").arg(&script).status().unwrap().success(), "valid sh");
+        // On a Mac that already has Homebrew and Node it installs nothing and only adds the PATH line, twice-safe.
+        let has = |c: &str| Command::new("/bin/sh").args(["-c", &format!("command -v {c}")]).status().is_ok_and(|s| s.success());
+        if Path::new("/opt/homebrew/bin/brew").exists() && has("node") && has("xcode-select") {
+            for _ in 0..2 {
+                let o = Command::new("/bin/sh").arg(&script).env("HOME", &home).output().unwrap();
+                assert!(String::from_utf8_lossy(&o.stdout).contains("Tools ready."), "{}", String::from_utf8_lossy(&o.stdout));
+            }
+            let zp = std::fs::read_to_string(home.join(".zprofile")).unwrap();
+            assert_eq!(zp.matches("brew shellenv").count(), 1, "the line is added once");
+        }
+        let _ = std::fs::remove_dir_all(base);
     }
 }

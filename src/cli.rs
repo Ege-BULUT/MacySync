@@ -190,6 +190,9 @@ fn take(c: &Ctx, t: &str, from: &Device, ep: Endpoint, offer: Offer, picks: Pick
         }
         if finished {
             println!("placed {} items, {} problems; the brief is in {}", l.placed, l.problems, dir.display());
+            if dir.join("preflight.sh").exists() {
+                println!("first run `sh {}` to install Homebrew and Node, then start the agent", dir.join("preflight.sh").display());
+            }
             break;
         }
         std::thread::sleep(Duration::from_secs(3));
