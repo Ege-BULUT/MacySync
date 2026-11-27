@@ -55,6 +55,15 @@
 <section>
   <div class="wrap">
     <div class="release reveal">
+      <h2>0.1.1</h2>
+      <span class="date">2026-11-27</span>
+      <ul data-l="tr">
+        <li>Yeni Mac, git'in adını, e-postasını ve credential helper'ını eski Mac'ten alır. Her değer yalnızca yeni Mac'te henüz yoksa yazılır; GOAL.md neyin yazıldığını, neyin korunduğunu listeler.</li>
+        <li>Eski Mac gh'ın helper'ını kullanıyorsa: yeni Mac'te gh oturumu açıksa gh auth setup-git çalışır, değilse önce oturum açman istenir. Kabuk komutu olarak yazılmış bir helper asla kopyalanmaz, çünkü içinde token olabilir.</li>
+        <li>Depoda artık bir LICENSE dosyası var (MIT).</li>
+      </ul>
+    </div>
+    <div class="release reveal">
       <h2>0.1.0</h2>
       <span class="date">2026-11-27</span>
       <ul data-l="tr">
@@ -65,7 +74,9 @@
         <li>Mac'ten Mac'e doğrudan aktarım motoru, uçtan uca şifreli, kesilince kaldığı yerden devam eder.</li>
         <li>Kurulum notu: seçtiğin ajan için AGENTS.md ve GOAL.md.</li>
         <li>Pencere için bir yerleşim editörü; kaydedince çalışan uygulamaya hemen yansır.</li>
-        <li>Sırada: Seç ağacı ve Taşı ekranı.</li>
+        <li>Seç ağacı ve Taşı ekranı: alıcı hepsini ya da bir kısmını seçer, yalnızca seçtikleri gönderilir.</li>
+        <li>Aynı ağda olmayan Mac'ler için MacySync'in kendi Tailscale düğümü.</li>
+        <li>Her uygulama keychain anahtarını getirir, yeni Mac onu kendisi ekler.</li>
       </ul>
     </div>
   </div>

@@ -55,6 +55,20 @@
 <section>
   <div class="wrap">
     <div class="release reveal">
+      <h2>0.1.1</h2>
+      <span class="date">2026-11-27</span>
+      <ul data-l="en">
+        <li>The new Mac takes git's name, email and credential helper from the old Mac. Each value is set only where the new Mac has none, and GOAL.md lists what was set or kept.</li>
+        <li>An old Mac that used gh's helper: the new Mac runs gh auth setup-git when gh is signed in there, and otherwise asks you to sign in first. A helper written as a shell command is never copied, since it can hold a token.</li>
+        <li>The repo has a LICENSE file (MIT).</li>
+      </ul>
+      <ul data-l="tr">
+        <li>Yeni Mac, git'in adını, e-postasını ve credential helper'ını eski Mac'ten alır. Her değer yalnızca yeni Mac'te henüz yoksa yazılır; GOAL.md neyin yazıldığını, neyin korunduğunu listeler.</li>
+        <li>Eski Mac gh'ın helper'ını kullanıyorsa: yeni Mac'te gh oturumu açıksa gh auth setup-git çalışır, değilse önce oturum açman istenir. Kabuk komutu olarak yazılmış bir helper asla kopyalanmaz, çünkü içinde token olabilir.</li>
+        <li>Depoda artık bir LICENSE dosyası var (MIT).</li>
+      </ul>
+    </div>
+    <div class="release reveal">
       <h2>0.1.0</h2>
       <span class="date">2026-11-27</span>
       <ul data-l="en">
@@ -65,7 +79,9 @@
         <li>Direct Mac to Mac transfer engine, end-to-end encrypted, resuming after a cut.</li>
         <li>Setup brief: AGENTS.md and GOAL.md for the agent you choose.</li>
         <li>A layout editor for the window, saved straight into the running app.</li>
-        <li>Next: the Pick tree and the Move screen.</li>
+        <li>The Pick tree and the Move screen: the receiver picks all or some, and only its picks are sent.</li>
+        <li>MacySync's own Tailscale node, for Macs that are not on the same network.</li>
+        <li>Each app brings its keychain key, and the new Mac adds it itself.</li>
       </ul>
       <ul data-l="tr">
         <li>Her Mac bir kimlik, bir ad ve bir görünüm alır: donanımdan algılanan gerçek model ve renk.</li>
@@ -75,7 +91,9 @@
         <li>Mac'ten Mac'e doğrudan aktarım motoru, uçtan uca şifreli, kesilince kaldığı yerden devam eder.</li>
         <li>Kurulum notu: seçtiğin ajan için AGENTS.md ve GOAL.md.</li>
         <li>Pencere için bir yerleşim editörü; kaydedince çalışan uygulamaya hemen yansır.</li>
-        <li>Sırada: Seç ağacı ve Taşı ekranı.</li>
+        <li>Seç ağacı ve Taşı ekranı: alıcı hepsini ya da bir kısmını seçer, yalnızca seçtikleri gönderilir.</li>
+        <li>Aynı ağda olmayan Mac'ler için MacySync'in kendi Tailscale düğümü.</li>
+        <li>Her uygulama keychain anahtarını getirir, yeni Mac onu kendisi ekler.</li>
       </ul>
     </div>
   </div>

@@ -1,6 +1,6 @@
 [package]
 name = "macysync"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Move a Mac to a new Mac: the old one offers, the new one picks, an AI agent sets it up."
