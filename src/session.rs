@@ -106,6 +106,11 @@ pub fn write_receiver(b: &Bus, transfer: &str, doc: &ReceiverDoc) -> Result<(), 
     b.put_json(&format!("{transfer}/receiver.json"), &d, None, &format!("receiver {}", d.state)).map(|_| ())
 }
 
+/// How often a running transfer writes its progress to the bus; a state change writes at once. Each write is a
+/// commit on the bus repo: every 10 s made ~720 commits an hour, every 2 min makes 30. Live progress travels
+/// through the tunnel itself; the bus copy is what the other Mac's TRANSFER panel shows.
+pub const REPORT_S: u64 = 120;
+
 /// Puts this side's progress on the bus: session.json for the sender, receiver.json for the receiver.
 pub fn report(b: &Bus, transfer: &str, sender: bool, l: &Live) -> Result<(), String> {
     if !sender {

@@ -678,7 +678,7 @@ fn poll(s: &mut S, now: f64, tx: &mut Tx) -> bool {
     }
     if let (Some(l), Some(b)) = (s.pick.live.as_ref().map(|l| l.lock().unwrap().clone()), s.bus.clone()) {
         let finished = l.done || l.failed;
-        if !l.state.is_empty() && (l.state != s.pick.reported_state || (!finished && now - s.pick.reported > 10.0)) {
+        if !l.state.is_empty() && (l.state != s.pick.reported_state || (!finished && now - s.pick.reported > session::REPORT_S as f32)) {
             s.pick.reported = now;
             s.pick.reported_state = l.state.clone();
             let (t, sender) = (s.pick.transfer.clone(), s.sending() == Some(true));
@@ -1399,6 +1399,11 @@ fn right_panel(s: &S) -> El {
                     .child(mono(format!("{}/s", fmt_bytes(x.avg_bytes_per_s)), 12.0, SOFT)))
                 .child(el().w_full().h(6.0).radius(3.0).fill(FIELD).child(el().h(6.0).w((r.w - 28.0) * pct).radius(3.0).linear_gradient(1.57, [(0.0, BLUE), (1.0, ICE)])))
                 .child(mono(format!("{} {} · {}", s.t("started", "başladı"), x.started_utc, x.network), 10.0, MUTED));
+            if x.state == "sending" {
+                // The bus copy moves every REPORT_S, so say so and count down, or a still bar looks like a hang.
+                let left = (x.updated + session::REPORT_S).saturating_sub(bus::now()).min(session::REPORT_S);
+                c = c.child(mono(format!("{} {:02}:{:02}", s.t("Updates every 2 min · next in", "2 dakikada bir güncellenir · sonraki"), left / 60, left % 60), 10.0, MUTED));
+            }
         }
         None => {
             let d = s.peer_device().filter(|_| !s.finding);
@@ -1592,7 +1597,7 @@ fn live(l: Live) -> Option<session::Shared> {
 
 fn sending_scene(s: &mut S, this_sends: bool) {
     accepted(s, this_sends);
-    s.session = Some(Session { state: "sending".into(), started_utc: bus::utc(bus::now() - 280), bytes: 23_400_000_000, total: 81_200_000_000, avg_bytes_per_s: 86_000_000, network: "LAN".into(), ..Session::default() });
+    s.session = Some(Session { state: "sending".into(), started_utc: bus::utc(bus::now() - 280), updated: bus::now() - 3, bytes: 23_400_000_000, total: 81_200_000_000, avg_bytes_per_s: 86_000_000, network: "LAN".into(), ..Session::default() });
     s.pick.live = live(Live { state: if this_sends { "sending" } else { "receiving" }.into(), bytes: 23_400_000_000, total: 81_200_000_000, items_done: 14, items: 41, current: "Documents".into(), network: "LAN".into(), ..Live::default() });
     s.flowing = true;
     s.flow.dir = if this_sends { 1.0 } else { -1.0 };

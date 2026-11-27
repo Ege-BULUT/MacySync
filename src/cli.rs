@@ -123,13 +123,13 @@ fn sender(c: &Ctx, r: &Request, to: &Device, only: &[String]) -> Result<(), Stri
     let live: session::Shared = Arc::new(Mutex::new(Live::default()));
     let (b, t2, to2, l2) = (c.bus.clone(), t.clone(), to.clone(), live.clone());
     let worker = std::thread::spawn(move || session::serve(&b, &t2, &to2, &offer, &picks, &home, l2));
-    let mut last_write = Instant::now() - Duration::from_secs(60);
+    let (mut last_state, mut last_write) = (String::new(), Instant::now());
     loop {
         let l = live.lock().unwrap().clone();
         let finished = l.done || l.failed || worker.is_finished();
         println!("{} {} / {}  {}/{} items  {}  {}", l.state, gb(l.bytes), gb(l.total), l.items_done, l.items, l.network, l.current);
-        if finished || last_write.elapsed() > Duration::from_secs(10) {
-            last_write = Instant::now();
+        if finished || l.state != last_state || last_write.elapsed() > Duration::from_secs(session::REPORT_S) {
+            (last_state, last_write) = (l.state.clone(), Instant::now());
             let _ = session::report(&c.bus, &t, true, &l);
         }
         if finished {
@@ -179,13 +179,13 @@ fn take(c: &Ctx, t: &str, from: &Device, ep: Endpoint, offer: Offer, picks: Pick
     let live: session::Shared = Arc::new(Mutex::new(Live::default()));
     let (l2, d2, name) = (live.clone(), dir.clone(), from.name.clone());
     let worker = std::thread::spawn(move || session::receive(&ep, &offer, &picks, &d2, &name, &home, l2));
-    let mut last_write = Instant::now();
+    let (mut last_state, mut last_write) = (String::new(), Instant::now());
     loop {
         let l = live.lock().unwrap().clone();
         let finished = l.done || l.failed || worker.is_finished();
         println!("{} {} / {}  {}/{} items  {}  {}", l.state, gb(l.bytes), gb(l.total), l.items_done, l.items, l.current, l.note);
-        if finished || last_write.elapsed() > Duration::from_secs(10) {
-            last_write = Instant::now();
+        if finished || l.state != last_state || last_write.elapsed() > Duration::from_secs(session::REPORT_S) {
+            (last_state, last_write) = (l.state.clone(), Instant::now());
             let _ = session::report(&c.bus, t, false, &l);
         }
         if finished {
