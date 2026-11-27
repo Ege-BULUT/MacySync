@@ -1,0 +1,57 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  # MacySync's own Tailscale node (--tailscale, "Use Tailscale") runs these two, which sit next to macysync.
+  TAILSCALE: v1.102.3
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: cargo build --release --locked --target aarch64-apple-darwin
+      - name: Tailscale
+        run: |
+          GOBIN="$PWD/ts" go install "tailscale.com/cmd/tailscale@$TAILSCALE" "tailscale.com/cmd/tailscaled@$TAILSCALE"
+          cp "$(go env GOMODCACHE)/tailscale.com@$TAILSCALE/LICENSE" ts/LICENSE
+      - name: Package
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          app=dist/MacySync.app
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          cp target/aarch64-apple-darwin/release/macysync ts/tailscale ts/tailscaled "$app/Contents/MacOS/"
+          cp ts/LICENSE "$app/Contents/Resources/tailscale-LICENSE"
+          cat > "$app/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleName</key><string>MacySync</string>
+            <key>CFBundleIdentifier</key><string>io.github.egebulut.macysync</string>
+            <key>CFBundleExecutable</key><string>macysync</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>$version</string>
+            <key>LSMinimumSystemVersion</key><string>13.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          EOF
+          # Not notarised: an ad-hoc signature over the whole bundle, so macOS sees one app.
+          codesign --force --deep --sign - "$app"
+          (cd dist && ditto -c -k --keepParent MacySync.app MacySync-macos-arm64.zip)
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/MacySync-macos-arm64.zip --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
