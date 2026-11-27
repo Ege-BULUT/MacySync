@@ -1,6 +1,8 @@
-//! The launcher: a borderless, see-through window shaped like two lobes and a bridge. This Mac is always on
-//! the left, the other Mac on the right, each drawn as its own MacBook. While files move, the electric lines
-//! run from the sender to the receiver on both Macs.
+//! The launcher: a borderless, see-through window, mirror-symmetric and cut at 45 degrees: a MacBook's top edge
+//! with its camera notch, and a stand under the body that holds the panel. This Mac is always on the left, the
+//! other Mac on the right, each drawn as its own MacBook. The background lines run in from both sides and bend at
+//! 45 degrees into the conduit between them, as traces into a connector; while files move, they run from the
+//! sender to the receiver on both Macs.
 
 use std::collections::HashSet;
 use std::sync::mpsc::{Receiver, Sender, channel};
@@ -46,6 +48,10 @@ pub struct Layout {
     pub elements: Elements,
     pub conduit: [[f32; 2]; 4],
     pub flow: FlowGuide,
+    /// Straight edges between the outline's points, and background lines that bend at 45 degrees, instead of
+    /// smooth curves through them.
+    #[serde(default)]
+    pub sharp: bool,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug)]
@@ -732,16 +738,18 @@ fn caps(s: impl Into<String>, c: Color) -> El {
     text(s.into()).font(style(11.0, 700.0).mono().tracking(1.4)).color(c)
 }
 
-/// The outline through the layout's points, smoothed (Catmull-Rom; the editor draws it the same way): a tall
-/// lobe on the left for this Mac, a bridge, and a lower lobe on the right for the other Mac.
+/// The outline through the layout's points: smoothed (Catmull-Rom), or straight from point to point when the layout
+/// is sharp. The editor draws it the same way.
 fn segments() -> Vec<([f32; 2], [f32; 2], [f32; 2], [f32; 2])> {
     let o = &layout().outline;
     let n = o.len();
     (0..n)
         .map(|i| {
             let (p0, p1, p2, p3) = (o[(i + n - 1) % n], o[i], o[(i + 1) % n], o[(i + 2) % n]);
-            let c1 = [p1[0] + (p2[0] - p0[0]) / 6.0, p1[1] + (p2[1] - p0[1]) / 6.0];
-            let c2 = [p2[0] - (p3[0] - p1[0]) / 6.0, p2[1] - (p3[1] - p1[1]) / 6.0];
+            // Sharp: the control points on the straight line, a third of the way in from each end.
+            let ((a, b), k) = if layout().sharp { ((p1, p2), 1.0 / 3.0) } else { ((p0, p3), 1.0 / 6.0) };
+            let c1 = [p1[0] + (p2[0] - a[0]) * k, p1[1] + (p2[1] - a[1]) * k];
+            let c2 = [p2[0] - (b[0] - p1[0]) * k, p2[1] - (b[1] - p1[1]) * k];
             (p1, c1, c2, p2)
         })
         .collect()
@@ -775,8 +783,8 @@ fn depth(poly: &[[f32; 2]], p: [f32; 2]) -> f32 {
 const LINES: usize = 15;
 const SAMPLES: usize = 200;
 
-/// A sampled curve from one lobe to the other, and how deep inside the body each sample is (Rune has no
-/// clipping, so the lines are cut and faded by this).
+/// A sampled curve from one side to the other, and how deep inside the body each sample is, short of the title row
+/// (Rune has no clipping, so the lines are cut and faded by this).
 struct FlowLine {
     pts: Vec<[f32; 2]>,
     depth: Vec<f32>,
@@ -811,26 +819,37 @@ fn flow_lines() -> &'static [FlowLine] {
 
 fn make_flow_lines() -> Vec<FlowLine> {
     let poly: Vec<[f32; 2]> = segments().into_iter().flat_map(|s| (1..=16).map(move |i| bezier(s, i as f32 / 16.0))).collect();
+    // The title row counts as outside: the lines stop short of it, so none runs through the name or the version.
+    let e = &layout().elements;
+    let clear = |p: [f32; 2]| {
+        [e.title, e.controls].iter().map(|r| (r.x - p[0]).max(p[0] - r.x - r.w).max(0.0).hypot((r.y - p[1]).max(p[1] - r.y - r.h).max(0.0)) - 10.0).fold(f32::MAX, f32::min)
+    };
     (0..LINES)
         .map(|i| {
             let o = -1.0 + 2.0 * i as f32 / (LINES - 1) as f32;
-            // They fan out over each lobe and squeeze through the bridge.
+            // They fan out on each side and squeeze through the bridge.
             let f = layout().flow;
             let (yl, yb, yr) = (f.left.y + o * f.left.spread, f.bridge.y + o * f.bridge.spread, f.right.y + o * f.right.spread);
-            let wobble = 4.0 + 6.0 * hash(i as u32 * 7 + 1);
+            let wobble = if layout().sharp { 0.0 } else { 4.0 + 6.0 * hash(i as u32 * 7 + 1) };
             let shift = hash(i as u32 * 13 + 5) * std::f32::consts::TAU;
             let pts: Vec<[f32; 2]> = (0..SAMPLES)
                 .map(|j| {
                     let x = -20.0 + 1320.0 * j as f32 / (SAMPLES - 1) as f32;
-                    let sm = |a: f32, b: f32| {
-                        let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
-                        t * t * (3.0 - 2.0 * t)
+                    // How far the line has moved by `dy` over the range: smoothly, or at 45 degrees in its middle as a
+                    // circuit trace bends.
+                    let bend = |[a, b]: [f32; 2], dy: f32| {
+                        if layout().sharp {
+                            dy * ((x - (a + b) / 2.0) / dy.abs().max(1.0) + 0.5).clamp(0.0, 1.0)
+                        } else {
+                            let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
+                            dy * t * t * (3.0 - 2.0 * t)
+                        }
                     };
-                    let y = yl + (yb - yl) * sm(f.into_bridge[0], f.into_bridge[1]) + (yr - yb) * sm(f.into_right[0], f.into_right[1]) + wobble * (x / 160.0 + shift).sin();
+                    let y = yl + bend(f.into_bridge, yb - yl) + bend(f.into_right, yr - yb) + wobble * (x / 160.0 + shift).sin();
                     [x, y]
                 })
                 .collect();
-            let depth: Vec<f32> = pts.iter().map(|p| depth(&poly, *p)).collect();
+            let depth: Vec<f32> = pts.iter().map(|p| depth(&poly, *p).min(clear(*p))).collect();
             let mut inside = Vec::new();
             let mut from = None;
             for (j, d) in depth.iter().chain([&-1.0]).enumerate() {
@@ -868,12 +887,17 @@ fn backdrop(s: &S) -> Vec<El> {
             if b <= a + 1 {
                 continue;
             }
-            let fade = ((l.depth[a..=b].iter().copied().fold(f32::MAX, f32::min) - 2.0) / 28.0).clamp(0.0, 1.0);
+            // The glow's blur has to end inside the body: over the see-through desktop it comes out as a bright
+            // blob. Near the edge only the thin core is drawn.
+            let near = l.depth[a..=b].iter().copied().fold(f32::MAX, f32::min);
+            let (fade, glow_fade) = (((near - 6.0) / 20.0).clamp(0.0, 1.0), ((near - 26.0) / 24.0).clamp(0.0, 1.0));
             if fade == 0.0 {
                 continue;
             }
             let pts = l.pts[a..=b].to_vec();
-            glow = glow.stroke(pts.clone(), 7.0, Color { a: (0.16 + 0.5 * env) * fade, ..tint });
+            if glow_fade > 0.0 {
+                glow = glow.stroke(pts.clone(), 7.0, Color { a: (0.16 + 0.5 * env) * glow_fade, ..tint });
+            }
             core = core.stroke(pts, 1.6, Color { a: (0.36 + 0.55 * env) * fade, ..tint });
         }
     }
@@ -881,8 +905,9 @@ fn backdrop(s: &S) -> Vec<El> {
     out.push(full(glow).blur(6.0).key("glow"));
     out.push(full(core).blur(0.6).key("core"));
     out.push(full(Shape::new().stroke_path(&body, 2.0, LineCap::Round, EDGE)).key("edge"));
-    out.push(full(Shape::new().stroke_path(&body, 3.0, LineCap::Round, Color { a: 0.26 * env, ..BLUE2 })).blur(9.0).key("outline-glow"));
-    out.push(full(Shape::new().stroke_path(&body, 1.0, LineCap::Round, Color { a: 0.35 + 0.3 * env, ..STEEL })).key("outline-line"));
+    // The outline lights up blue while files move. No blurred glow: Rune's blur over the transparent desktop outside
+    // the body comes out as a hard, oversaturated band.
+    out.push(full(Shape::new().stroke_path(&body, 1.0 + 0.6 * env, LineCap::Round, Color { a: 0.35 + 0.4 * env, ..STEEL.mix(BLUE2, env) })).key("outline-line"));
     out
 }
 
@@ -1438,7 +1463,8 @@ fn incoming(s: &S, r: &Request) -> El {
             "bu Mac'in dosyalarını, ayarlarını ve gizli bilgilerini almak istiyor. Bir şey taşınmadan önce neyi sunacağını sen seçersin."))),
     };
     let card = col().w_full().fill(Color { r: 0.004, g: 0.007, b: 0.013, a: 1.0 }).border(1.0, BLUE).radius(16.0).padding(22.0).gap(12.0)
-        .shadow(30.0, 80.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.6 })
+        // A tight shadow: the window is see-through, and a wide one would show past concave edges.
+        .shadow(10.0, 28.0, Color { r: 0.0, g: 0.0, b: 0.0, a: 0.6 })
         .child(caps(s.t("REQUEST", "İSTEK"), BLUE2))
         .child(label(title, 19.0, 700.0, INK))
         .child(label(body, 13.5, 500.0, SOFT).wrap().w_full())
