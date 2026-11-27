@@ -107,6 +107,10 @@ pub fn key_command(svc: &str, acct: &str, app: &str) -> String {
         js(svc), js(acct), js(app), sh(svc), sh(acct))
 }
 
+/// The old Mac's git `user.*` and credential helper lines (`key value`), nothing else from its credential settings.
+/// gh's helper goes as it is; any other `!command` helper only as `!`, since a command can hold a token.
+pub const GIT_COMMAND: &str = r"git config --global --get-regexp '^(user\.|credential\..*helper$)' | sed -E '/gh auth git-credential/!s/^(credential[^ ]*) !.*/\1 !/'";
+
 /// Folders rebuilt from source on the new Mac: skipped inside the person's own folders when asked to.
 pub const REBUILDABLE: [&str; 8] = ["node_modules", "target", ".venv", "venv", "__pycache__", ".gradle", "DerivedData", ".next"];
 
@@ -369,6 +373,11 @@ pub fn scan(home: &Path, app_dirs: &[PathBuf], skip_rebuildable: bool) -> Node {
             }
         }))
         .collect();
+    // After .gitconfig, so the new Mac applies these over whichever file it ends up with.
+    if exists("~/.gitconfig") || exists("~/.config/git/config") {
+        shell.push(Node { id: "shell/git".into(), name: "git name, email and credential helper".into(), command: GIT_COMMAND.into(), file: "git-config.txt".into(),
+            note: "MacySync set these where this Mac had none and ran `gh auth setup-git` in place of gh's helper. Check `git config --global --list` and that `git ls-remote` of a private repo works.".into(), ..Node::default() });
+    }
     for c in list(&home.join(".config")) {
         let t = tilde(home, &c);
         if !claimed.contains(&t) {

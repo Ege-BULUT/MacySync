@@ -5,6 +5,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+use crate::me;
 use crate::scan::Node;
 use crate::wire::{expand, safe};
 
@@ -33,6 +34,8 @@ pub struct Placed {
     pub generated: Vec<PathBuf>,
     /// Apps' keys added to this Mac's login keychain, by service.
     pub keys: Vec<String>,
+    /// Settings made or left here, a line each (git's name, email and credential helper).
+    pub done: Vec<String>,
     pub problems: Vec<String>,
 }
 
@@ -52,6 +55,10 @@ pub fn place(staging: &Path, dir: &Path, old_home: &str, home: &Path, items: &[N
                     Ok(svc) => p.keys.push(svc),
                     Err(e) => p.problems.push(e),
                 },
+                Ok(()) if item.id == "shell/git" => {
+                    (p.done, p.problems) = git_config(&std::fs::read_to_string(&dst).unwrap_or_default(), home, &me::gh_paths());
+                    p.generated.push(dst);
+                }
                 Ok(()) => p.generated.push(dst),
                 Err(e) => p.problems.push(format!("{}: {e}", item.file)),
             }
@@ -133,6 +140,53 @@ fn add_key(file: &Path, home: &Path) -> Result<String, String> {
     }
     let _ = std::fs::remove_file(file);
     Ok(k.service)
+}
+
+/// Sets the old Mac's git `user.*` values and credential helpers (`git config --get-regexp` lines) where this Mac
+/// has none; what is set here stays. gh's helper names gh's path on the old Mac, so instead `gh auth setup-git` runs
+/// with the first of `gh` that `gh auth status` finds signed in. Returns (what was done or kept, what is left).
+fn git_config(lines: &str, home: &Path, gh: &[String]) -> (Vec<String>, Vec<String>) {
+    // HOME is the one `place` was given, and only its ~/.gitconfig is touched.
+    let run = |cmd: &str, args: &[&str]| Command::new(cmd).args(args).env("HOME", home).env_remove("GIT_CONFIG_GLOBAL").env_remove("XDG_CONFIG_HOME").output();
+    let err = |o: std::io::Result<std::process::Output>| o.map(|o| String::from_utf8_lossy(&o.stderr).trim().to_string()).unwrap_or_else(|e| e.to_string());
+    let (mut done, mut left, mut ours, mut wants_gh) = (vec![], vec![], vec![], false);
+    for l in lines.lines() {
+        let (key, value) = l.split_once(' ').unwrap_or((l, ""));
+        if value.contains("gh auth git-credential") {
+            wants_gh = true;
+        } else if value == "!" {
+            left.push(format!("git {key}: the old Mac's helper is a command of its own, not carried (it can hold a token); set it up by hand"));
+        } else if !value.is_empty() {
+            // An empty helper only clears the list before gh's; set ones stay, a second value of ours adds to the first.
+            let mine = ours.contains(&key);
+            if !mine && run("git", &["config", "--global", "--get-all", key]).is_ok_and(|o| o.status.success()) {
+                done.push(format!("git {key}: kept this Mac's"));
+                continue;
+            }
+            let mut args = vec!["config", "--global"];
+            if mine {
+                args.push("--add");
+            }
+            args.extend([key, value]);
+            let o = run("git", &args);
+            if o.as_ref().is_ok_and(|o| o.status.success()) {
+                done.push(format!("git {key}: set to `{value}`"));
+                ours.push(key);
+            } else {
+                left.push(format!("git config --global {key} '{value}': {}", err(o)));
+            }
+        }
+    }
+    if wants_gh {
+        match gh.iter().find(|g| run(g, &["auth", "status"]).is_ok_and(|o| o.status.success())) {
+            Some(g) => match run(g, &["auth", "setup-git"]) {
+                Ok(o) if o.status.success() => done.push("git credential helper: gh is signed in here, ran `gh auth setup-git`".into()),
+                o => left.push(format!("gh auth setup-git: {}", err(o))),
+            },
+            None => left.push("git credential helper: the old Mac used gh's and gh isn't signed in here; run `gh auth login`, then `gh auth setup-git`".into()),
+        }
+    }
+    (done, left)
 }
 
 /// Points links that named the old home folder (`~/.local/bin/claude -> /Users/old/.local/share/...`) at the
@@ -281,6 +335,9 @@ pub fn write_brief(dir: &Path, from: &str, old_home: &str, home: &Path, placed: 
         for s in &p.keys {
             g += &format!("- added to this Mac's login keychain: `{s}` (done; start the app to check its saved logins)\n");
         }
+        for d in &p.done {
+            g += &format!("- done: {d}\n");
+        }
         for k in &p.kept {
             g += &format!("- what was here before: `{}`\n", k.display());
         }
@@ -372,6 +429,41 @@ mod tests {
         std::fs::write(&f, r#"{"service":"Helium Storage Key","account":"Helium","app":"/Applications/Helium.app","key":""}"#).unwrap();
         assert!(add_key(&f, home).unwrap_err().contains("didn't hand over 'Helium Storage Key'"));
         assert!(!f.exists(), "the file goes either way");
+    }
+
+    /// The old Mac's git name, email and helpers fill what this Mac lacks; gh's helper becomes `gh auth setup-git`
+    /// here, only when gh is signed in; a helper command of its own never leaves the old Mac.
+    #[test]
+    fn git_identity_and_credential_helper_come_over_without_secrets() {
+        let base = std::env::temp_dir().join(format!("macysync-git-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let (old, new) = (base.join("old"), base.join("new"));
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::create_dir_all(&new).unwrap();
+        std::fs::write(old.join(".gitconfig"), "[user]\n\tname = Old Name\n\temail = old@old.mac\n[credential \"https://github.com\"]\n\thelper =\n\thelper = !/opt/homebrew/bin/gh auth git-credential\n[credential]\n\thelper = !f() { echo password=ghp_SECRET; }; f\n\tusername = someone\n[core]\n\teditor = vim\n").unwrap();
+        std::fs::write(new.join(".gitconfig"), "[user]\n\temail = mine@new.mac\n").unwrap();
+        let sent = Command::new("/bin/sh").args(["-c", crate::scan::GIT_COMMAND]).env("HOME", &old).env_remove("GIT_CONFIG_GLOBAL").env_remove("XDG_CONFIG_HOME").output().unwrap();
+        let sent = String::from_utf8(sent.stdout).unwrap();
+        assert!(sent.contains("user.name Old Name") && sent.contains("gh auth git-credential"), "{sent}");
+        assert!(!sent.contains("SECRET") && !sent.contains("someone") && !sent.contains("editor"), "{sent}");
+
+        // A stand-in gh, signed in, whose setup-git writes its helper the way gh does.
+        let gh = base.join("gh");
+        std::fs::write(&gh, "#!/bin/sh\n[ \"$2\" = setup-git ] && git config --global credential.https://github.com.helper '!/new/bin/gh auth git-credential'\nexit 0\n").unwrap();
+        Command::new("chmod").arg("+x").arg(&gh).status().unwrap();
+        let (done, left) = git_config(&sent, &new, &[gh.display().to_string()]);
+        let get = |k: &str| String::from_utf8(Command::new("git").args(["config", "--file"]).arg(new.join(".gitconfig")).args(["--get-all", k]).output().unwrap().stdout).unwrap();
+        assert_eq!(get("user.name"), "Old Name\n");
+        assert_eq!(get("user.email"), "mine@new.mac\n", "this Mac's own value stays");
+        assert_eq!(get("credential.https://github.com.helper"), "!/new/bin/gh auth git-credential\n", "gh's helper is gh's own here, not the old path");
+        assert!(done.iter().any(|d| d.contains("gh auth setup-git")) && done.iter().any(|d| d.contains("user.email: kept")), "{done:?}");
+        assert!(left.len() == 1 && left[0].contains("credential.helper"), "the custom helper is for the person: {left:?}");
+
+        // gh not signed in: no helper copied, the person is told how.
+        let (_, left) = git_config("credential.helper !gh auth git-credential\n", &new, &[base.join("no-gh").display().to_string()]);
+        assert!(left.iter().any(|l| l.contains("gh auth login")), "{left:?}");
+        assert!(get("credential.helper").is_empty());
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

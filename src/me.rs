@@ -147,12 +147,14 @@ pub fn token() -> Option<String> {
         return Some(t).filter(|t| !t.is_empty());
     }
     keyring::Entry::new(KEYRING, "github").ok().and_then(|e| e.get_password().ok()).or_else(|| {
-        // An app opened from Finder doesn't get the shell's PATH, so look where gh is usually installed too.
-        let local = home_dir().join(".local/bin/gh").to_string_lossy().to_string();
-        ["gh", "/opt/homebrew/bin/gh", "/usr/local/bin/gh", &local].into_iter()
-            .map(|gh| run(gh, &["auth", "token"]))
-            .find(|t| !t.is_empty())
+        gh_paths().iter().map(|gh| run(gh, &["auth", "token"])).find(|t| !t.is_empty())
     })
+}
+
+/// gh, and where it is usually installed: an app opened from Finder doesn't get the shell's PATH.
+pub fn gh_paths() -> Vec<String> {
+    let local = home_dir().join(".local/bin/gh").to_string_lossy().to_string();
+    vec!["gh".into(), "/opt/homebrew/bin/gh".into(), "/usr/local/bin/gh".into(), local]
 }
 
 pub fn save_token(t: &str) -> Result<(), String> {
