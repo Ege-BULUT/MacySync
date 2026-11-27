@@ -50,7 +50,16 @@ const TR = {
   "tw.1": "Ayarlar, çalışma alanları, sekmeler, düzenler ve widget'lar", "tw.2": "Her bilgisayara bir klasör, senin GitHub deponda",
   "tw.3": "Push, Pull ya da değiştikçe canlı senkron", "tw.4": "Widget'lar araçlarıyla gelir: git, Homebrew, npm, cargo",
   "tw.5": "macOS, Windows ve Linux; ücretsiz ve açık kaynak", "tw.go": "wavysync.vercel.app'i aç",
-  "foot": "Apple ile bağlantılı değildir. Mac ve MacBook, Apple Inc.'in ticari markalarıdır."
+  "foot": "Apple ile bağlantılı değildir. Mac ve MacBook, Apple Inc.'in ticari markalarıdır.",
+  "fam.k": "Aile",
+  "fam.h": "Tek aile, <em>her türlü taşıma</em>",
+  "fam.p": "Aynı yapımcı, aynı görünüm. Aynı sistemden aynı sisteme taşıyanlar en derine iner, çünkü iki uç da aynı yolları ve ayarları paylaşır; AnySync sistemler arasında geçer; WavySync de Wave Terminal'i her yerde aynı tutar.",
+  "fam.here": "buradasın",
+  "fam.macysync": "Mac'ten Mac'e",
+  "fam.windysync": "Windows'tan Windows'a",
+  "fam.linysync": "Linux'tan Linux'a, her dağıtım",
+  "fam.anysync": "macOS, Windows ve Linux arasında",
+  "fam.wavysync": "Wave Terminal, her bilgisayarda aynı"
 };
 const EN = {};
 document.querySelectorAll("[data-i]").forEach(el => { EN[el.dataset.i] = el.innerHTML; });
